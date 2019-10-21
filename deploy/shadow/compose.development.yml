@@ -1,0 +1,12 @@
+version: '3.4'
+
+services:
+  backend:
+    image: registry.gitlab.com/sangkuriang-dev/transmissor-be/backend:devel
+    env_file: env.development
+    container_name: backend
+    ports:
+      - 44445:44445
+    volumes:
+      - /tmp:/tmp
+    restart: on-failure

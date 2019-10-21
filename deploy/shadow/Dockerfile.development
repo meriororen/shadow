@@ -1,0 +1,19 @@
+FROM golang:1.13-alpine as builder
+WORKDIR /go/src
+COPY . ./transmissor-be/
+RUN apk update
+RUN apk add git
+RUN apk add musl-dev
+RUN apk add dep
+RUN apk add make
+RUN apk add gcc
+ARG ENV
+ARG ARCHFLAG
+RUN cd transmissor-be && dep ensure -v --vendor-only
+RUN make -C transmissor-be compile
+
+FROM alpine:latest as app
+WORKDIR /cbi
+COPY ./deploy/backend/env.development .env
+COPY --from=builder /go/src/transmissor-be/transmissor-be-backend backend
+CMD ["/cbi/backend"]
