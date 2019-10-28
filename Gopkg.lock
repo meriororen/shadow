@@ -38,6 +38,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/mackerelio/go-osstat"
+  packages = ["cpu","memory"]
+  revision = "af968620273d2d4006c4211536841d1ba2cabb0f"
+
+[[projects]]
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
   revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
@@ -64,12 +70,12 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["windows"]
+  packages = ["unix","windows"]
   revision = "3e7259c5e7c2076bb2728047a3df75adb1bad8e5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5d6f874fe61747b84b5844b9b45871a8585651db6fcf8551c4000600ba9e619a"
+  inputs-digest = "4240e9c89a90b4d74f3c4874dbe07eb8e189939f2758c2ebe9bed2d93bfeb1a8"
   solver-name = "gps-cdcl"
   solver-version = 1

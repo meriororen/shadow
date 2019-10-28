@@ -7,7 +7,6 @@ PROJ = shadow
 OSFLAG = linux
 
 ifeq (${ENV},production)
-CFLAGS = musl-gcc
 ARMVERSION = 7
 ARCHFLAG = arm
 RETAG=latest
@@ -41,7 +40,7 @@ ifeq (${ENV},production)
 endif
 	@$(foreach app, $(APPS), \
 		echo compiling "$(app)" for "$(ENV)" in arch=$(ARCHFLAG); \
-		GOOS=$(OSFLAG) CGO_ENABLED=1 GOARCH=$(ARCHFLAG) GOARM=$(ARMVERSION) CC=$(CFLAGS) go build -v -o $(PROJ)-$(app) app/$(app)/main.go;)
+		GOOS=$(OSFLAG) CGO_ENABLED=0 GOARCH=$(ARCHFLAG) GOARM=$(ARMVERSION) go build -v -o $(PROJ)-$(app) app/$(app)/main.go;)
 
 build: checkenv
 	@$(foreach app, $(APPS), \

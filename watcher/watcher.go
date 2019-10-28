@@ -4,15 +4,33 @@ import (
 	"context"
 	"fmt"
 	"log"
+	//	"syscall"
+	"sync"
 	"time"
+
+	"shadow/cmd"
+	"shadow/status"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	//	"github.com/mackerelio/go-osstat/cpu"
+	"github.com/mackerelio/go-osstat/memory"
 )
+
+var wg sync.WaitGroup
+
+type WatchConfig struct {
+	ImageName   string
+	AutoPull    bool
+	HBPeriod    time.Duration
+	CommandChan chan cmd.Command
+}
 
 type Watcher struct {
 	WatchList       map[string]*Actor
-	WatchConfigList []string
+	WatchConfigList []WatchConfig
+	StatusChan      chan status.Status
+
 	cli             *client.Client
 	heartBeatPeriod time.Duration
 }
@@ -20,6 +38,7 @@ type Watcher struct {
 type Actor struct {
 	ImageNames   []string
 	ContainerIDs []string
+	watchConfig  *WatchConfig
 }
 
 type Container interface {
@@ -41,21 +60,74 @@ func NewWatcher() *Watcher {
 		fmt.Println("Cannot initialize client: ", err)
 	}
 
-	return &Watcher{
+	wt := &Watcher{
 		WatchList:       make(map[string]*Actor),
-		WatchConfigList: []string{},
+		WatchConfigList: []WatchConfig{},
 		cli:             cli,
+		StatusChan:      make(chan status.Status),
+	}
+
+	wt.AddImageToWatch(WatchConfig{
+		ImageName: "System",
+		HBPeriod:  3 * time.Second,
+	})
+
+	return wt
+}
+
+func (w *Watcher) CommandExecutor(command cmd.Command, wc *WatchConfig) {
+	rsc := make(chan interface{})
+	erc := make(chan error)
+
+	go func() {
+		if res, err := cmd.Exec(command.Type, wc.ImageName); err != nil {
+			erc <- err
+		} else {
+			rsc <- res
+		}
+		close(rsc)
+		close(erc)
+	}()
+
+	select {
+	case result := <-rsc:
+		log.Println("Result of cmd ", command, " -> ", result)
 	}
 }
+
+/*
+	Spec:
+	Should pull if there's newer image, iff autopull is enabled on watchlist image
+	Should pull if there's pull command on watchlist image
+*/
 
 func (w *Watcher) WatchImages() {
-	for _, actor := range w.WatchList {
-		for image := range actor.ImageNames {
-			image = image
-		}
-	}
+	//for _, itw := range w.WatchConfigList {
+	// wait for status from each goroutine
+	log.Println("Waiting..")
+	wg.Wait()
+	//}
 }
 
+func getSystemStatus() (status.System, error) {
+	ms, err := memory.Get()
+	if err != nil {
+		log.Fatal("SystemStat: Cannot get memory status")
+	}
+
+	return status.System{
+		Memory: status.Memory{
+			Total:  ms.Total,
+			Free:   ms.Free,
+			Used:   ms.Used,
+			Cached: ms.Cached,
+		},
+	}, nil
+}
+
+/*
+	Spec:
+*/
 func (w *Watcher) WatchContainer() {
 	for _, actor := range w.WatchList {
 		for cont := range actor.ContainerIDs {
@@ -65,25 +137,64 @@ func (w *Watcher) WatchContainer() {
 }
 
 func (w *Watcher) WatchAll() {
-	for {
-		w.WatchImages()
-		w.WatchContainer()
-	}
+	//for {
+	//	log.Println("here")
+	w.WatchImages()
+	//	log.Println("and there")
+	//	w.WatchContainer()
+	//}
 }
 
 func (w *Watcher) isInWatchConfigList(imageName string) int {
 	for i, im := range w.WatchConfigList {
-		if imageName == im {
+		if imageName == im.ImageName {
 			return i
 		}
 	}
 	return -1
 }
 
-func (w *Watcher) AddImageToWatch(imageName string) {
-	if w.isInWatchConfigList(imageName) == -1 {
-		w.WatchConfigList = append(w.WatchConfigList, imageName)
+func (w *Watcher) AddImageToWatch(config WatchConfig) {
+	if w.isInWatchConfigList(config.ImageName) == -1 {
+		config.CommandChan = make(chan cmd.Command)
+		w.WatchConfigList = append(w.WatchConfigList, config)
 	}
+
+	// dispatch a goroutine for each watched item
+	wg.Add(1)
+	go func() {
+		for {
+			select {
+			case command, ok := <-config.CommandChan:
+				if !ok {
+					log.Println("Goroutine for", config.ImageName, "is done")
+					wg.Done()
+					return
+				}
+
+				log.Println("Got command for ", config.ImageName, "->", command)
+				w.CommandExecutor(command, &config)
+			case <-time.After(config.HBPeriod):
+				//log.Println("HB for", config.ImageName)
+
+				status := status.Status{
+					LocalTime: time.Now().Local(),
+				}
+				if config.ImageName == "System" {
+					if ss, err := getSystemStatus(); err != nil {
+						log.Println("Error getting system status:", err)
+						break
+					} else {
+						status.Payload = ss
+					}
+				} else {
+					// TODO: container status
+				}
+
+				w.StatusChan <- status
+			}
+		}
+	}()
 
 	w.addImagesToWatchList()
 	w.addRunningContainersToWatchList()
@@ -92,8 +203,10 @@ func (w *Watcher) AddImageToWatch(imageName string) {
 func (w *Watcher) RemoveImageFromWatchList(imageName string) {
 	if index := w.isInWatchConfigList(imageName); index != -1 {
 		l := len(w.WatchConfigList)
+		log.Println("Removing ", imageName)
+		close(w.WatchConfigList[index].CommandChan)
+		wg.Done()
 		w.WatchConfigList[index] = w.WatchConfigList[l-1]
-		w.WatchConfigList[l-1] = ""
 		w.WatchConfigList = w.WatchConfigList[:l-1]
 		// remove from watchlist
 		delete(w.WatchList, imageName)
@@ -108,9 +221,12 @@ func (w *Watcher) addImagesToWatchList() {
 
 	for _, image := range images {
 		for _, t := range image.RepoTags {
-			for _, watch := range w.WatchConfigList {
-				if watch == t {
-					w.WatchList[watch] = &Actor{ImageNames: image.RepoTags}
+			for k, watch := range w.WatchConfigList {
+				if watch.ImageName == t {
+					w.WatchList[watch.ImageName] = &Actor{
+						ImageNames:  image.RepoTags,
+						watchConfig: &w.WatchConfigList[k],
+					}
 				}
 			}
 		}

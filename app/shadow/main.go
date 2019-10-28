@@ -2,37 +2,47 @@ package main
 
 import (
 	"log"
+	"time"
 
+	"shadow/api"
+	"shadow/env"
 	"shadow/watcher"
 
-	pmg "github.com/eclipse/paho.mqtt.golang"
 	"github.com/subosito/gotenv"
-)
-
-var (
-	mq *pmg.Client
 )
 
 func main() {
 	gotenv.Load()
+	env.Init()
 
-	wt := watcher.NewWatcher()
-	wt.AddImageToWatch("golang:1.13-alpine")
-	wt.AddImageToWatch("registry.gitlab.com/sangkuriang-dev/transmissor-be/backend:devel")
+	wt := env.Default.Wtch
 
-	//	wt.WatchAll()
+	backend := "registry.gitlab.com/sangkuriang-dev/transmissor-be/backend:devel"
+	golang := "golang:1.13-alpine"
 
-	/*
-		mq = &mqtt.NewClient(
-			os.Getenv("MQTT_BROKER_URL"),
-			os.Getenv("MQTT_BROKER_USER"),
-			os.Getenv("MQTT_BROKER_PASS"),
-			"shadow-"+fmt.Sprint(time.Now().Local().Format(time.RFC3339)),
-			"",
-		)
-	*/
+	wt.AddImageToWatch(watcher.WatchConfig{
+		ImageName: golang,
+		AutoPull:  false,
+		HBPeriod:  3 * time.Second,
+	})
+
+	wt.AddImageToWatch(watcher.WatchConfig{
+		ImageName: backend,
+		AutoPull:  true,
+		HBPeriod:  2 * time.Second,
+	})
 
 	for _, w := range wt.WatchList {
 		log.Println((*w).ImageNames, " => ", (*w).ContainerIDs)
 	}
+
+	wt.RemoveImageFromWatchList("golang:1.13-alpine")
+
+	for _, w := range wt.WatchList {
+		log.Println((*w).ImageNames, " => ", (*w).ContainerIDs)
+	}
+
+	api := api.NewAPI(wt)
+
+	api.Serve()
 }
