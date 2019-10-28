@@ -2,22 +2,22 @@ package watcher
 
 import (
 	"context"
-	"fmt"
 	"log"
 	//	"syscall"
 	"sync"
 	"time"
 
 	"shadow/cmd"
+	"shadow/docker"
 	"shadow/status"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	//	"github.com/mackerelio/go-osstat/cpu"
 	"github.com/mackerelio/go-osstat/memory"
 )
 
 var wg sync.WaitGroup
+var Default *Watcher
 
 type WatchConfig struct {
 	ImageName   string
@@ -31,7 +31,6 @@ type Watcher struct {
 	WatchConfigList []WatchConfig
 	StatusChan      chan status.Status
 
-	cli             *client.Client
 	heartBeatPeriod time.Duration
 }
 
@@ -55,15 +54,9 @@ type Image interface {
 }
 
 func NewWatcher() *Watcher {
-	cli, err := client.NewEnvClient()
-	if err != nil {
-		fmt.Println("Cannot initialize client: ", err)
-	}
-
 	wt := &Watcher{
 		WatchList:       make(map[string]*Actor),
 		WatchConfigList: []WatchConfig{},
-		cli:             cli,
 		StatusChan:      make(chan status.Status),
 	}
 
@@ -80,7 +73,7 @@ func (w *Watcher) CommandExecutor(command cmd.Command, wc *WatchConfig) {
 	erc := make(chan error)
 
 	go func() {
-		if res, err := cmd.Exec(command.Type, wc.ImageName); err != nil {
+		if res, err := cmd.Exec(command, wc.ImageName); err != nil {
 			erc <- err
 		} else {
 			rsc <- res
@@ -92,6 +85,8 @@ func (w *Watcher) CommandExecutor(command cmd.Command, wc *WatchConfig) {
 	select {
 	case result := <-rsc:
 		log.Println("Result of cmd ", command, " -> ", result)
+	case err := <-erc:
+		log.Println("Error running cmd ", command, " -> ", err)
 	}
 }
 
@@ -172,7 +167,7 @@ func (w *Watcher) AddImageToWatch(config WatchConfig) {
 					return
 				}
 
-				log.Println("Got command for ", config.ImageName, "->", command)
+				//log.Println("Got command for ", config.ImageName, "->", command)
 				w.CommandExecutor(command, &config)
 			case <-time.After(config.HBPeriod):
 				//log.Println("HB for", config.ImageName)
@@ -214,7 +209,7 @@ func (w *Watcher) RemoveImageFromWatchList(imageName string) {
 }
 
 func (w *Watcher) addImagesToWatchList() {
-	images, err := w.cli.ImageList(context.Background(), types.ImageListOptions{})
+	images, err := docker.Default.Client.ImageList(context.Background(), types.ImageListOptions{})
 	if err != nil {
 		log.Fatal("Cannot add image in local to watchlist ", err)
 	}
@@ -234,7 +229,7 @@ func (w *Watcher) addImagesToWatchList() {
 }
 
 func (w *Watcher) addRunningContainersToWatchList() {
-	containers, err := w.cli.ContainerList(context.Background(), types.ContainerListOptions{})
+	containers, err := docker.Default.Client.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		log.Fatal("Cannot get container list : ", err)
 	}

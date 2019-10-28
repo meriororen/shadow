@@ -3,10 +3,23 @@ package mqtt
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	pmg "github.com/eclipse/paho.mqtt.golang"
 )
+
+var Default pmg.Client
+
+func Init() pmg.Client {
+	return NewClient(
+		os.Getenv("MQTT_BROKER_URL"),
+		os.Getenv("MQTT_BROKER_USER"),
+		os.Getenv("MQTT_BROKER_PASS"),
+		"shadow-"+fmt.Sprint(time.Now().Local().Format(time.RFC3339)),
+		"",
+	)
+}
 
 func connLostHandler(c pmg.Client, err error) {
 	fmt.Printf("Connection lost, reason: %v\n", err)
