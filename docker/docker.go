@@ -14,8 +14,7 @@ import (
 )
 
 type Docker struct {
-	Client *client.Client
-
+	Client           *client.Client
 	savedCredentials types.AuthConfig
 }
 
@@ -41,7 +40,7 @@ func attemptLogin(creds types.AuthConfig) (idtoken string, err error) {
 	return res.IdentityToken, nil
 }
 
-func (d Docker) RegistryLogin(url string, user string, pass string, token string) (interface{}, error) {
+func (d *Docker) RegistryLogin(url string, user string, pass string, token string) (interface{}, error) {
 	creds := types.AuthConfig{
 		ServerAddress: url,
 		Username:      user,
@@ -52,10 +51,10 @@ func (d Docker) RegistryLogin(url string, user string, pass string, token string
 	if idtoken, err := attemptLogin(creds); err != nil {
 		return "", err
 	} else {
-		Default.savedCredentials = creds
+		d.savedCredentials = creds
 
 		if idtoken != "" {
-			Default.savedCredentials.IdentityToken = idtoken
+			d.savedCredentials.IdentityToken = idtoken
 			log.Println("Login success, id token: ", idtoken)
 		} else {
 			log.Println("Id token is empty")
@@ -65,10 +64,10 @@ func (d Docker) RegistryLogin(url string, user string, pass string, token string
 	return "Login Successful", nil
 }
 
-func (d Docker) ImagePull(imageName string) (interface{}, error) {
+func (d *Docker) ImagePull(imageName string) (interface{}, error) {
 	auth := types.AuthConfig{
-		Username: Default.savedCredentials.Username,
-		Password: Default.savedCredentials.Password,
+		Username: d.savedCredentials.Username,
+		Password: d.savedCredentials.Password,
 	}
 
 	log.Println(auth)
@@ -93,4 +92,19 @@ func (d Docker) ImagePull(imageName string) (interface{}, error) {
 	io.Copy(os.Stdout, out)
 
 	return "Success Pulled", nil
+}
+
+func (d *Docker) ContainerList(imageName string) (interface{}, error) {
+
+	return "Listed Container", nil
+}
+
+func (d *Docker) ContainerStart(imageName string) (interface{}, error) {
+
+	return "Started Container", nil
+}
+
+func (d *Docker) ContainerStop(id string) (interface{}, error) {
+
+	return "Stopped Container", nil
 }
