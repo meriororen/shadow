@@ -20,16 +20,16 @@ var wg sync.WaitGroup
 var Default *Watcher
 
 type WatchConfig struct {
-	ImageName   string
-	AutoPull    bool
-	HBPeriod    time.Duration
-	CommandChan chan cmd.Command
+	ImageName string
+	AutoPull  bool
+	HBPeriod  time.Duration
 }
 
 type Watcher struct {
 	WatchList       map[string]*Actor
 	WatchConfigList []WatchConfig
 	StatusChan      chan status.Status
+	CommandChan     chan cmd.Command
 
 	heartBeatPeriod time.Duration
 }
@@ -58,6 +58,7 @@ func NewWatcher() *Watcher {
 		WatchList:       make(map[string]*Actor),
 		WatchConfigList: []WatchConfig{},
 		StatusChan:      make(chan status.Status),
+		CommandChan:     make(chan cmd.Command),
 	}
 
 	wt.AddImageToWatch(WatchConfig{
@@ -66,28 +67,6 @@ func NewWatcher() *Watcher {
 	})
 
 	return wt
-}
-
-func (w *Watcher) CommandExecutor(command cmd.Command, wc *WatchConfig) {
-	rsc := make(chan interface{})
-	erc := make(chan error)
-
-	go func() {
-		if res, err := cmd.Exec(command, wc.ImageName); err != nil {
-			erc <- err
-		} else {
-			rsc <- res
-		}
-		close(rsc)
-		close(erc)
-	}()
-
-	select {
-	case result := <-rsc:
-		log.Println("Result of cmd ", command, " -> ", result)
-	case err := <-erc:
-		log.Println("Error running cmd ", command, " -> ", err)
-	}
 }
 
 /*
@@ -151,7 +130,6 @@ func (w *Watcher) isInWatchConfigList(imageName string) int {
 
 func (w *Watcher) AddImageToWatch(config WatchConfig) {
 	if w.isInWatchConfigList(config.ImageName) == -1 {
-		config.CommandChan = make(chan cmd.Command)
 		w.WatchConfigList = append(w.WatchConfigList, config)
 	}
 
@@ -160,15 +138,16 @@ func (w *Watcher) AddImageToWatch(config WatchConfig) {
 	go func() {
 		for {
 			select {
-			case command, ok := <-config.CommandChan:
-				if !ok {
-					log.Println("Goroutine for", config.ImageName, "is done")
-					wg.Done()
-					return
-				}
-
-				//log.Println("Got command for ", config.ImageName, "->", command)
-				w.CommandExecutor(command, &config)
+			/*
+				case command, ok := <-config.CommandChan:
+					if !ok {
+						log.Println("Goroutine for", config.ImageName, "is done")
+						wg.Done()
+						return
+					}
+					//log.Println("Got command for ", config.ImageName, "->", command)
+					w.CommandExecutor(command, &config)
+			*/
 			case <-time.After(config.HBPeriod):
 				//log.Println("HB for", config.ImageName)
 
@@ -199,7 +178,6 @@ func (w *Watcher) RemoveImageFromWatchList(imageName string) {
 	if index := w.isInWatchConfigList(imageName); index != -1 {
 		l := len(w.WatchConfigList)
 		log.Println("Removing ", imageName)
-		close(w.WatchConfigList[index].CommandChan)
 		wg.Done()
 		w.WatchConfigList[index] = w.WatchConfigList[l-1]
 		w.WatchConfigList = w.WatchConfigList[:l-1]

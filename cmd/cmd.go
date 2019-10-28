@@ -15,6 +15,10 @@ type Command struct {
 	Payload []byte
 }
 
+type CmdPull struct {
+	ImageName string `json:"image"`
+}
+
 type CmdLogin struct {
 	URL      string `json:"url"`
 	Username string `json:"username"`
@@ -23,16 +27,21 @@ type CmdLogin struct {
 }
 
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
+	if cmd.Payload == nil {
+		return "", fmt.Errorf("Error executing command, payload must not be empty!")
+	}
+
 	switch cmd.Type {
 	case "pull":
-		if res, err = PullImage(args[0].(string)); err != nil {
+		pullcmd := CmdPull{}
+		if err := json.Unmarshal(cmd.Payload, &pullcmd); err != nil {
+			log.Println("Unprocessable pull payload", err)
+		}
+
+		if res, err = PullImage(pullcmd); err != nil {
 			return "Error Pulling!", err
 		}
 	case "login":
-		if cmd.Payload == nil {
-			return "", fmt.Errorf("Error Logging in, payload must not be empty!")
-		}
-
 		logincmd := CmdLogin{}
 		if err := json.Unmarshal(cmd.Payload, &logincmd); err != nil {
 			log.Println("Unprocessable login payload", err)
@@ -46,10 +55,14 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 	return res, nil
 }
 
-func PullImage(name string) (interface{}, error) {
-	log.Println("pulling image: ", name)
+func PullImage(pull CmdPull) (resp interface{}, err error) {
+	log.Println("pulling image: ", pull.ImageName)
 
-	return "Pulled!", nil
+	if resp, err = docker.Default.ImagePull(pull.ImageName); err != nil {
+		log.Fatal("Failed to pull image: ", err)
+	}
+
+	return resp, nil
 }
 
 func Login(login CmdLogin) (resp interface{}, err error) {
@@ -60,7 +73,7 @@ func Login(login CmdLogin) (resp interface{}, err error) {
 	log.Println("Token: ", login.Token)
 
 	if resp, err = docker.Default.RegistryLogin(login.URL, login.Username, login.Password, login.Token); err != nil {
-		log.Fatal("Failed to log in", err)
+		log.Fatal("Failed to log in: ", err)
 	}
 
 	return resp, nil
