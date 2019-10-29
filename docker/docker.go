@@ -1,12 +1,13 @@
 package docker
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
-	"os"
+	//	"os"
 
 	"shadow/rsp"
 
@@ -69,7 +70,7 @@ func (d *Docker) RegistryLogin(url string, user string, pass string, token strin
 	return rsp.Response{Type: "login"}, nil
 }
 
-func (d *Docker) ImagePull(imageName string) (rsp.Response, error) {
+func (d *Docker) ImagePull(imageName string, prg chan []byte) (rsp.Response, error) {
 	auth := types.AuthConfig{
 		Username: d.savedCredentials.Username,
 		Password: d.savedCredentials.Password,
@@ -89,10 +90,21 @@ func (d *Docker) ImagePull(imageName string) (rsp.Response, error) {
 	}
 	defer out.Close()
 
-	io.Copy(os.Stdout, out)
+	// progress update
+	reader := bufio.NewReader(out)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				log.Println(err)
+			}
+		}
+		prg <- []byte(line)
+	}
 
-	return rsp.Response{Type: "pull"}, nil
-
+	return rsp.Response{Type: "pull", Payload: "Pull Success"}, nil
 }
 
 func (d *Docker) ImageList(imageName string) (rsp.Response, error) {

@@ -12,8 +12,9 @@ import (
 )
 
 type Command struct {
-	Type    string
-	Payload []byte
+	Type         string
+	ProgressChan chan []byte
+	Payload      []byte
 }
 
 type CmdPull struct {
@@ -47,7 +48,7 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			log.Println("Unprocessable pull payload", err)
 		}
 
-		if res, err = PullImage(pullcmd); err != nil {
+		if res, err = PullImage(pullcmd, cmd.ProgressChan); err != nil {
 			return "Error Pulling!", err
 		}
 	case "login":
@@ -100,10 +101,10 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 	return res, nil
 }
 
-func PullImage(pull CmdPull) (resp rsp.Response, err error) {
+func PullImage(pull CmdPull, prg chan []byte) (resp rsp.Response, err error) {
 	log.Println("pulling image: ", pull.ImageName)
 
-	if resp, err = docker.Default.ImagePull(pull.ImageName); err != nil {
+	if resp, err = docker.Default.ImagePull(pull.ImageName, prg); err != nil {
 		log.Println("Failed to pull image: ", err)
 		return resp, err
 	}

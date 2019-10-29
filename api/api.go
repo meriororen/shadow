@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"shadow/cmd"
-	//	"shadow/docker"
 	"shadow/env"
 	"shadow/mqtt"
 	"shadow/rsp"
@@ -23,24 +22,46 @@ type MqttHandler func(client pmg.Client, msg pmg.Message)
 func commandExecutor(command cmd.Command) {
 	rsc := make(chan interface{})
 	erc := make(chan error)
+	prg := make(chan []byte) // progress channel
 
 	go func() {
+		if command.Type == "pull" {
+			command.ProgressChan = prg
+
+			// dispatch another goroutine to monitor progress
+			go func() {
+				for {
+					select {
+					case progress, ok := <-prg:
+						if !ok {
+							return
+						}
+						if token := mqtt.Default.Publish(env.Default.Topicprefix+"/progress", 0, false, progress); token.Wait() && token.Error() != nil {
+							log.Println("MQTTMON: Cannot publish progress")
+						}
+					}
+				}
+			}()
+		}
+
 		if res, err := cmd.Exec(command); err != nil {
 			erc <- err
 		} else {
 			rsc <- res
 		}
+		close(prg)
 		close(rsc)
 		close(erc)
 	}()
 
-	var err error
-	var theresp []byte
+	var (
+		err     error
+		theresp []byte
+	)
 	select {
 	case result := <-rsc:
 		resp := result.(rsp.Response)
 		log.Println("Result of cmd ", resp.Type, " -> ", resp.Payload)
-		log.Println("Got response for ", resp.Type, "->", resp.Payload)
 
 		if theresp, err = json.Marshal(resp.Payload); err != nil {
 			log.Println("MQTTMON: Cannot marshal response struct")
