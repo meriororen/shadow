@@ -1,14 +1,14 @@
 FROM golang:1.13-buster as builder
 WORKDIR /go/src
-COPY . ./transmissor-be/
-RUN apt-get update && apt-get install -yq gcc make build-essential gcc-arm-linux-gnueabihf go-dep
+COPY . ./shadow/
+RUN apt-get update && apt-get install -yq gcc make go-dep
 ARG ENV
 ARG ARCHFLAG
-RUN cd transmissor-be && dep ensure -v
-RUN make -C transmissor-be compile
+RUN cd shadow && dep ensure -v
+RUN make -C shadow compile
 
 FROM arm32v7/alpine as app
 WORKDIR /cbi
-COPY ./deploy/backend/env.production .env
-COPY --from=builder /go/src/transmissor-be/transmissor-be-backend backend
-CMD ["/cbi/backend"]
+COPY ./deploy/shadow/env.production .env
+COPY --from=builder /go/src/shadow/shadow-shadow shadow
+CMD ["/cbi/shadow"]

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"shadow/docker"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/go-connections/nat"
@@ -41,20 +43,39 @@ type CmdContainerList struct {
 }
 
 type CmdContainerRun struct {
-	ImageName        string              `json:"image_name"`
-	Name             string              `json:"name,omitempty"`
-	Volumes          map[string]struct{} `json:"volumes,omitempty"`
-	Networks         []string            `json:"networks,omitempty"`
-	Env              []string            `json:"env,omitempty"`
-	WorkingDir       string              `json:"workdir,omitempty"`
-	EntryPoint       string              `json:"entrypoint,omitempty"`
-	Cmd              strslice.StrSlice   `json:"cmd,omitempty"`
-	HostPrivileged   bool                `json:"privileged,omitempty"`
-	HostPortBindings nat.PortMap         `json:"ports,omitempty"`
+	ImageName        string            `json:"image_name"`
+	Name             string            `json:"name,omitempty"`
+	Volumes          []string          `json:"volumes,omitempty"`
+	Networks         []string          `json:"networks,omitempty"`
+	Env              []string          `json:"env,omitempty"`
+	WorkingDir       string            `json:"workdir,omitempty"`
+	EntryPoint       string            `json:"entrypoint,omitempty"`
+	Cmd              strslice.StrSlice `json:"cmd,omitempty"`
+	HostPrivileged   bool              `json:"privileged,omitempty"`
+	HostPortBindings []string          `json:"ports,omitempty"`
 }
 
 type CmdContainerStop struct {
 	Id string `json:"id"`
+}
+
+func parseMountPoints(volumes []string) (res []mount.Mount) {
+	for _, vol := range volumes {
+		mnt := strings.Split(vol, ":")
+
+		var readonly bool
+		if len(mnt) > 2 && mnt[2] == "ro" {
+			readonly = true
+		}
+		res = append(res, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   mnt[0],
+			Target:   mnt[1],
+			ReadOnly: readonly,
+		})
+	}
+
+	return res
 }
 
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
@@ -126,18 +147,26 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			log.Println("Unprocessable pull payload", err)
 		}
 
+		exposedPorts, bindings, err := nat.ParsePortSpecs(runcmd.HostPortBindings)
+		log.Println("bindings: ", bindings)
+		log.Println("exposed: ", exposedPorts)
+		if err != nil {
+			return "Error Port bindings format", err
+		}
+
+		mountBindings := parseMountPoints(runcmd.Volumes)
+
 		ccfg := container.Config{
-			Image:      runcmd.ImageName,
-			Volumes:    runcmd.Volumes,
-			Env:        runcmd.Env,
-			Entrypoint: []string{"/bin/sh"},
-			Cmd:        runcmd.Cmd,
-			Tty:        true,
+			Image:        runcmd.ImageName,
+			Env:          runcmd.Env,
+			Cmd:          runcmd.Cmd,
+			ExposedPorts: exposedPorts,
 		}
 
 		hcfg := container.HostConfig{
 			Privileged:   runcmd.HostPrivileged,
-			PortBindings: runcmd.HostPortBindings,
+			PortBindings: bindings,
+			Mounts:       mountBindings,
 		}
 
 		ncfg := network.NetworkingConfig{}
