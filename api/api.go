@@ -46,6 +46,15 @@ func MqttMonitor() {
 	var err error
 	for {
 		select {
+		case resp := <-docker.Default.ResponseChan:
+			log.Println("Got response for ", resp.Type, "->", resp.Payload)
+			var theresp []byte
+			if theresp, err = json.Marshal(resp.Payload); err != nil {
+				log.Println("MQTTMON: Cannot marshal response struct")
+			}
+			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, false, theresp); token.Wait() && token.Error() != nil {
+				log.Println("MQTTMON: Cannot publish response")
+			}
 		case stat := <-watcher.Default.StatusChan:
 			//log.Println("Sending Status")
 			var thestatus string
@@ -63,16 +72,7 @@ func MqttMonitor() {
 				log.Println("MQTTMON: Cannot publish status")
 			}
 		case command := <-watcher.Default.CommandChan:
-			//log.Println("Got command for ", config.ImageName, "->", command)
 			commandExecutor(command)
-		case resp := <-docker.Default.ResponseChan:
-			var theresp []byte
-			if theresp, err = json.Marshal(resp.Payload); err != nil {
-				log.Println("MQTTMON: Cannot marshal response struct")
-			}
-			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, false, theresp); token.Wait() && token.Error() != nil {
-				log.Println("MQTTMON: Cannot publish response")
-			}
 		}
 	}
 }

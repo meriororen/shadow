@@ -21,15 +21,18 @@ type Docker struct {
 	savedCredentials types.AuthConfig
 }
 
-var Default Docker
+var Default *Docker
 
-func NewDocker() (Docker, error) {
+func Init() (*Docker, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		log.Fatal("Cannot initialize client: ", err)
 	}
 
-	return Docker{Client: cli}, nil
+	return &Docker{
+		Client:       cli,
+		ResponseChan: make(chan rsp.Response),
+	}, nil
 }
 
 func attemptLogin(creds types.AuthConfig) (idtoken string, err error) {
@@ -89,6 +92,7 @@ func (d *Docker) ImagePull(imageName string) (interface{}, error) {
 	io.Copy(os.Stdout, out)
 
 	return "Success Pulled", nil
+
 }
 
 func (d *Docker) ImageList(imageName string) (interface{}, error) {
@@ -120,6 +124,7 @@ func (d *Docker) ImageList(imageName string) (interface{}, error) {
 	}
 
 	log.Println(imgs)
+	d.ResponseChan <- rsp.Response{Type: "listimages", Payload: imgs}
 
 	return "Success List Image", nil
 }
@@ -154,6 +159,7 @@ func (d *Docker) ContainerList(imageID string) (interface{}, error) {
 	}
 
 	log.Println(cnts)
+	d.ResponseChan <- rsp.Response{Type: "listcontainers", Payload: cnts}
 
 	return "Listed Container", nil
 }

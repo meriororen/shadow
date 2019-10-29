@@ -19,13 +19,13 @@ func main() {
 	gotenv.Load()
 	env.Init()
 
-	docker.Default, err = docker.NewDocker()
+	docker.Default, err = docker.Init()
 	if err != nil {
 		log.Fatal("Error starting docker client: ", err)
 	}
 
 	mqtt.Default = mqtt.Init()
-	watcher.Default = watcher.NewWatcher()
+	watcher.Default = watcher.Init()
 
 	/*
 		backend := "registry.gitlab.com/sangkuriang-dev/transmissor-be/backend:devel"

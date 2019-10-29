@@ -53,7 +53,7 @@ type Image interface {
 	Run(image string, conf containerRunConfig)
 }
 
-func NewWatcher() *Watcher {
+func Init() *Watcher {
 	wt := &Watcher{
 		WatchList:       make(map[string]*Actor),
 		WatchConfigList: []WatchConfig{},
