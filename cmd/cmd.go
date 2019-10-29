@@ -26,13 +26,22 @@ type CmdLogin struct {
 	Password string `json:"password,omitempty"`
 }
 
+type CmdImageList struct {
+	ImageName string `json:"image_name,omitempty"`
+}
+
+type CmdContainerList struct {
+	ImageID string `json:"image_id,omitempty"`
+}
+
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
-	if cmd.Payload == nil {
-		return "", fmt.Errorf("Error executing command, payload must not be empty!")
-	}
 
 	switch cmd.Type {
 	case "pull":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
+
 		pullcmd := CmdPull{}
 		if err := json.Unmarshal(cmd.Payload, &pullcmd); err != nil {
 			log.Println("Unprocessable pull payload", err)
@@ -42,6 +51,10 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			return "Error Pulling!", err
 		}
 	case "login":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
+
 		logincmd := CmdLogin{}
 		if err := json.Unmarshal(cmd.Payload, &logincmd); err != nil {
 			log.Println("Unprocessable login payload", err)
@@ -50,6 +63,38 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 		if res, err = Login(logincmd); err != nil {
 			return "Error Logging in!", err
 		}
+	case "listimages":
+		var pl string
+		if cmd.Payload == nil {
+			pl = ""
+		} else {
+			imagelistcmd := CmdImageList{}
+			if err := json.Unmarshal(cmd.Payload, &imagelistcmd); err != nil {
+				log.Println("Unprocessable Image List payload", err)
+			}
+			pl = imagelistcmd.ImageName
+		}
+
+		if res, err = docker.Default.ImageList(pl); err != nil {
+			return "Error listing out images!", err
+		}
+	case "listcontainers":
+		var pl string
+		if cmd.Payload == nil {
+			pl = ""
+		} else {
+			containerlistcmd := CmdContainerList{}
+			if err := json.Unmarshal(cmd.Payload, &containerlistcmd); err != nil {
+				log.Println("Unprocessable Container List payload", err)
+			}
+			pl = containerlistcmd.ImageID
+		}
+
+		if res, err = docker.Default.ContainerList(pl); err != nil {
+			return "Error listing out images!", err
+		}
+	case "stop":
+	case "start":
 	}
 
 	return res, nil

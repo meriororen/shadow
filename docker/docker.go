@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 
+	"shadow/rsp"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
@@ -15,6 +17,7 @@ import (
 
 type Docker struct {
 	Client           *client.Client
+	ResponseChan     chan rsp.Response
 	savedCredentials types.AuthConfig
 }
 
@@ -70,18 +73,12 @@ func (d *Docker) ImagePull(imageName string) (interface{}, error) {
 		Password: d.savedCredentials.Password,
 	}
 
-	log.Println(auth)
-
 	var strauth string
 	if encauth, err := json.Marshal(auth); err != nil {
-		log.Println("Cannot marshal auth")
 		return nil, err
 	} else {
-		log.Println("encauth :", encauth)
 		strauth = base64.URLEncoding.EncodeToString(encauth)
 	}
-
-	log.Println("Trying to pull with registry auth: ", strauth)
 
 	out, err := d.Client.ImagePull(context.Background(), imageName, types.ImagePullOptions{RegistryAuth: strauth})
 	if err != nil {
@@ -94,7 +91,69 @@ func (d *Docker) ImagePull(imageName string) (interface{}, error) {
 	return "Success Pulled", nil
 }
 
-func (d *Docker) ContainerList(imageName string) (interface{}, error) {
+func (d *Docker) ImageList(imageName string) (interface{}, error) {
+	images, err := d.Client.ImageList(context.Background(), types.ImageListOptions{})
+	if err != nil {
+		log.Fatal("Cannot list out all images: ", err)
+	}
+
+	log.Println("Listing image for: ", imageName)
+
+	imgs := []rsp.ImageItem{}
+	for _, img := range images {
+		for _, t := range img.RepoTags {
+			imgi := rsp.ImageItem{
+				Id:      img.ID[7:19],
+				Created: img.Created,
+				Names:   img.RepoTags,
+				Size:    img.VirtualSize,
+			}
+
+			if imageName == "" {
+				imgs = append(imgs, imgi)
+			} else {
+				if imageName == t {
+					imgs = append(imgs, imgi)
+				}
+			}
+		}
+	}
+
+	log.Println(imgs)
+
+	return "Success List Image", nil
+}
+
+func (d *Docker) ContainerList(imageID string) (interface{}, error) {
+	containers, err := d.Client.ContainerList(context.Background(), types.ContainerListOptions{})
+	if err != nil {
+		log.Fatal("Cannot get container list : ", err)
+	}
+
+	log.Println("Listing container for: ", imageID)
+
+	cnts := []rsp.ContainerItem{}
+	for _, cnt := range containers {
+		cnti := rsp.ContainerItem{
+			Id:      cnt.ID[0:11],
+			ImageId: cnt.ImageID[7:19],
+			Command: cnt.Command,
+			Created: cnt.Created,
+			Status:  cnt.Status,
+			Ports:   cnt.Ports,
+			Names:   cnt.Names,
+		}
+
+		if imageID == "" {
+			cnts = append(cnts, cnti)
+		} else {
+			if imageID == cnt.ImageID[7:19] {
+				cnts = append(cnts, cnti)
+			}
+		}
+	}
+
+	log.Println(cnts)
 
 	return "Listed Container", nil
 }

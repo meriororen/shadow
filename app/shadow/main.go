@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"time"
+	//	"time"
 
 	"shadow/api"
 	"shadow/docker"
@@ -27,30 +27,32 @@ func main() {
 	mqtt.Default = mqtt.Init()
 	watcher.Default = watcher.NewWatcher()
 
-	backend := "registry.gitlab.com/sangkuriang-dev/transmissor-be/backend:devel"
-	golang := "golang:1.13-alpine"
+	/*
+		backend := "registry.gitlab.com/sangkuriang-dev/transmissor-be/backend:devel"
+		golang := "golang:1.13-alpine"
 
-	watcher.Default.AddImageToWatch(watcher.WatchConfig{
-		ImageName: golang,
-		AutoPull:  false,
-		HBPeriod:  3 * time.Second,
-	})
+		watcher.Default.AddImageToWatch(watcher.WatchConfig{
+			ImageName: golang,
+			AutoPull:  false,
+			HBPeriod:  3 * time.Second,
+		})
 
-	watcher.Default.AddImageToWatch(watcher.WatchConfig{
-		ImageName: backend,
-		AutoPull:  true,
-		HBPeriod:  2 * time.Second,
-	})
+		watcher.Default.AddImageToWatch(watcher.WatchConfig{
+			ImageName: backend,
+			AutoPull:  true,
+			HBPeriod:  2 * time.Second,
+		})
 
-	for _, w := range watcher.Default.WatchList {
-		log.Println((*w).ImageNames, " => ", (*w).ContainerIDs)
-	}
+		for _, w := range watcher.Default.WatchList {
+			log.Println((*w).ImageNames, " => ", (*w).ContainerIDs)
+		}
 
-	watcher.Default.RemoveImageFromWatchList("golang:1.13-alpine")
+		watcher.Default.RemoveImageFromWatchList("golang:1.13-alpine")
 
-	for _, w := range watcher.Default.WatchList {
-		log.Println((*w).ImageNames, " => ", (*w).ContainerIDs)
-	}
+		for _, w := range watcher.Default.WatchList {
+			log.Println((*w).ImageNames, " => ", (*w).ContainerIDs)
+		}
+	*/
 
 	api.Serve()
 }

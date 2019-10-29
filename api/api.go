@@ -1,14 +1,17 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"shadow/cmd"
+	"shadow/docker"
 	"shadow/env"
 	"shadow/mqtt"
+	//	"shadow/rsp"
 	"shadow/status"
 	"shadow/watcher"
 
@@ -16,9 +19,6 @@ import (
 )
 
 type MqttHandler func(client pmg.Client, msg pmg.Message)
-
-func ResponseHandler(client pmg.Client, msg pmg.Message) {
-}
 
 func commandExecutor(command cmd.Command) {
 	rsc := make(chan interface{})
@@ -43,11 +43,11 @@ func commandExecutor(command cmd.Command) {
 }
 
 func MqttMonitor() {
+	var err error
 	for {
 		select {
 		case stat := <-watcher.Default.StatusChan:
 			//log.Println("Sending Status")
-
 			var thestatus string
 			switch v := stat.Payload.(type) {
 			case status.System:
@@ -60,12 +60,19 @@ func MqttMonitor() {
 			}
 			//log.Println("publishing to ", env.Default.Topicprefix+"/status")
 			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, false, thestatus); token.Wait() && token.Error() != nil {
-				log.Println("Cannot publish status")
+				log.Println("MQTTMON: Cannot publish status")
 			}
 		case command := <-watcher.Default.CommandChan:
-
 			//log.Println("Got command for ", config.ImageName, "->", command)
 			commandExecutor(command)
+		case resp := <-docker.Default.ResponseChan:
+			var theresp []byte
+			if theresp, err = json.Marshal(resp.Payload); err != nil {
+				log.Println("MQTTMON: Cannot marshal response struct")
+			}
+			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, false, theresp); token.Wait() && token.Error() != nil {
+				log.Println("MQTTMON: Cannot publish response")
+			}
 		}
 	}
 }
@@ -96,7 +103,6 @@ func CommandHandler(client pmg.Client, msg pmg.Message) {
 func MqttSubscribe() {
 	topics := map[string]pmg.MessageHandler{
 		"/command/+": CommandHandler,
-		"/response":  ResponseHandler,
 	}
 
 	for topic, topicHandler := range topics {
