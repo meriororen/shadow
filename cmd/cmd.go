@@ -6,7 +6,11 @@ import (
 	"log"
 
 	"shadow/docker"
-	"shadow/rsp"
+
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/strslice"
+	"github.com/docker/go-connections/nat"
 	//	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/client"
 )
@@ -36,6 +40,23 @@ type CmdContainerList struct {
 	ImageID string `json:"image_id,omitempty"`
 }
 
+type CmdContainerRun struct {
+	ImageName        string              `json:"image_name"`
+	Name             string              `json:"name,omitempty"`
+	Volumes          map[string]struct{} `json:"volumes,omitempty"`
+	Networks         []string            `json:"networks,omitempty"`
+	Env              []string            `json:"env,omitempty"`
+	WorkingDir       string              `json:"workdir,omitempty"`
+	EntryPoint       string              `json:"entrypoint,omitempty"`
+	Cmd              strslice.StrSlice   `json:"cmd,omitempty"`
+	HostPrivileged   bool                `json:"privileged,omitempty"`
+	HostPortBindings nat.PortMap         `json:"ports,omitempty"`
+}
+
+type CmdContainerStop struct {
+	Id string `json:"id"`
+}
+
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 	switch cmd.Type {
 	case "pull":
@@ -48,8 +69,9 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			log.Println("Unprocessable pull payload", err)
 		}
 
-		if res, err = PullImage(pullcmd, cmd.ProgressChan); err != nil {
-			return "Error Pulling!", err
+		log.Println("pulling image: ", pullcmd.ImageName)
+		if res, err = docker.Default.ImagePull(pullcmd.ImageName, cmd.ProgressChan); err != nil {
+			return "Error Pulling Image!", err
 		}
 	case "login":
 		if cmd.Payload == nil {
@@ -61,8 +83,8 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			log.Println("Unprocessable login payload", err)
 		}
 
-		if res, err = Login(logincmd); err != nil {
-			return "Error Logging in!", err
+		if res, err = docker.Default.RegistryLogin(logincmd.URL, logincmd.Username, logincmd.Password, logincmd.Token); err != nil {
+			return "Failed to log in", err
 		}
 	case "listimages":
 		var pl string
@@ -94,34 +116,50 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 		if res, err = docker.Default.ContainerList(pl); err != nil {
 			return "Error listing out images!", err
 		}
+	case "run":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
+
+		runcmd := CmdContainerRun{}
+		if err := json.Unmarshal(cmd.Payload, &runcmd); err != nil {
+			log.Println("Unprocessable pull payload", err)
+		}
+
+		ccfg := container.Config{
+			Image:      runcmd.ImageName,
+			Volumes:    runcmd.Volumes,
+			Env:        runcmd.Env,
+			Entrypoint: []string{"/bin/sh"},
+			Cmd:        runcmd.Cmd,
+			Tty:        true,
+		}
+
+		hcfg := container.HostConfig{
+			Privileged:   runcmd.HostPrivileged,
+			PortBindings: runcmd.HostPortBindings,
+		}
+
+		ncfg := network.NetworkingConfig{}
+
+		if res, err = docker.Default.ContainerRun(&ccfg, &hcfg, &ncfg, runcmd.Name); err != nil {
+			return "Error Running!", err
+		}
+
 	case "stop":
-	case "start":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
+
+		stopcmd := CmdContainerStop{}
+		if err := json.Unmarshal(cmd.Payload, &stopcmd); err != nil {
+			log.Println("Unprocessable pull payload", err)
+		}
+
+		if res, err = docker.Default.ContainerStop(stopcmd.Id); err != nil {
+			return "Error Stopping!", err
+		}
 	}
 
 	return res, nil
-}
-
-func PullImage(pull CmdPull, prg chan []byte) (resp rsp.Response, err error) {
-	log.Println("pulling image: ", pull.ImageName)
-
-	if resp, err = docker.Default.ImagePull(pull.ImageName, prg); err != nil {
-		log.Println("Failed to pull image: ", err)
-		return resp, err
-	}
-
-	return resp, nil
-}
-
-func Login(login CmdLogin) (resp rsp.Response, err error) {
-	log.Println("Loggin in..")
-	log.Println("Registry: ", login.URL)
-	log.Println("Username: ", login.Username)
-	log.Println("Password: ", login.Password)
-	log.Println("Token: ", login.Token)
-
-	if resp, err = docker.Default.RegistryLogin(login.URL, login.Username, login.Password, login.Token); err != nil {
-		log.Fatal("Failed to log in: ", err)
-	}
-
-	return resp, nil
 }

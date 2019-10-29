@@ -60,6 +60,9 @@ func commandExecutor(command cmd.Command) {
 	)
 	select {
 	case result := <-rsc:
+		if result == nil {
+			break
+		}
 		resp := result.(rsp.Response)
 		log.Println("Result of cmd ", resp.Type, " -> ", resp.Payload)
 
@@ -85,28 +88,45 @@ func commandExecutor(command cmd.Command) {
 }
 
 func MqttMonitor() {
-	for {
-		select {
-		case stat := <-watcher.Default.StatusChan:
-			//log.Println("Sending Status")
-			var thestatus string
-			switch v := stat.Payload.(type) {
-			case status.System:
-				thestatus = fmt.Sprintf("time: %s, total: %d, free: %d, cached: %d, used: %d",
-					stat.LocalTime.Format(time.RFC3339),
-					v.Memory.Total,
-					v.Memory.Free,
-					v.Memory.Cached,
-					v.Memory.Used)
+	// monitor Status
+	go func() {
+		for {
+			select {
+			case stat, ok := <-watcher.Default.StatusChan:
+				if !ok {
+					return
+				}
+				//log.Println("Sending Status")
+				var thestatus string
+				switch v := stat.Payload.(type) {
+				case status.System:
+					thestatus = fmt.Sprintf("time: %s, total: %d, free: %d, cached: %d, used: %d",
+						stat.LocalTime.Format(time.RFC3339),
+						v.Memory.Total,
+						v.Memory.Free,
+						v.Memory.Cached,
+						v.Memory.Used)
+				}
+				//log.Println("publishing to ", env.Default.Topicprefix+"/status")
+				if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, false, thestatus); token.Wait() && token.Error() != nil {
+					log.Println("MQTTMON: Cannot publish status")
+				}
 			}
-			//log.Println("publishing to ", env.Default.Topicprefix+"/status")
-			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, false, thestatus); token.Wait() && token.Error() != nil {
-				log.Println("MQTTMON: Cannot publish status")
-			}
-		case command := <-watcher.Default.CommandChan:
-			commandExecutor(command)
 		}
-	}
+	}()
+
+	// monitor command execution
+	go func() {
+		for {
+			select {
+			case command, ok := <-watcher.Default.CommandChan:
+				if !ok {
+					return
+				}
+				commandExecutor(command)
+			}
+		}
+	}()
 }
 
 func CommandHandler(client pmg.Client, msg pmg.Message) {
@@ -145,9 +165,7 @@ func MqttSubscribe() {
 func Serve() {
 	MqttSubscribe()
 
-	go func() {
-		MqttMonitor()
-	}()
+	MqttMonitor()
 
 	watcher.Default.WatchAll()
 }

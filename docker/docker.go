@@ -5,13 +5,17 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"time"
 	//	"os"
 
 	"shadow/rsp"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/client"
 )
@@ -176,12 +180,27 @@ func (d *Docker) ContainerList(imageID string) (rsp.Response, error) {
 	return rsp.Response{Type: "listcontainers", Payload: cnts}, nil
 }
 
-func (d *Docker) ContainerStart(imageName string) (rsp.Response, error) {
+func (d *Docker) ContainerRun(ccfg *container.Config, hcfg *container.HostConfig, ncfg *network.NetworkingConfig, name string) (rsp.Response, error) {
+	log.Println("starting container for image: ", ccfg)
+	resp, err := d.Client.ContainerCreate(context.Background(), ccfg, hcfg, ncfg, name)
 
-	return rsp.Response{Type: "start"}, nil
+	if err != nil {
+		return rsp.Response{}, err
+	} else {
+		log.Println("running created container with ID: ", resp.ID)
+		if err = d.Client.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{}); err != nil {
+			return rsp.Response{}, err
+		}
+	}
+
+	return rsp.Response{Type: "run", Payload: fmt.Sprint("Container ran with id: ", resp.ID)}, nil
 }
 
 func (d *Docker) ContainerStop(id string) (rsp.Response, error) {
+	timeout := time.Second * 10
+	if err := d.Client.ContainerStop(context.Background(), id, &timeout); err != nil {
+		return rsp.Response{}, err
+	}
 
-	return rsp.Response{Type: "stop"}, nil
+	return rsp.Response{Type: "stop", Payload: fmt.Sprint("Container Stopped for id: ", id)}, nil
 }
