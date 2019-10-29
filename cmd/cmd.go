@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"shadow/docker"
+	"shadow/rsp"
 	//	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/client"
 )
@@ -16,7 +17,7 @@ type Command struct {
 }
 
 type CmdPull struct {
-	ImageName string `json:"image"`
+	ImageName string `json:"image_name"`
 }
 
 type CmdLogin struct {
@@ -35,7 +36,6 @@ type CmdContainerList struct {
 }
 
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
-
 	switch cmd.Type {
 	case "pull":
 		if cmd.Payload == nil {
@@ -100,17 +100,18 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 	return res, nil
 }
 
-func PullImage(pull CmdPull) (resp interface{}, err error) {
+func PullImage(pull CmdPull) (resp rsp.Response, err error) {
 	log.Println("pulling image: ", pull.ImageName)
 
 	if resp, err = docker.Default.ImagePull(pull.ImageName); err != nil {
-		log.Fatal("Failed to pull image: ", err)
+		log.Println("Failed to pull image: ", err)
+		return resp, err
 	}
 
 	return resp, nil
 }
 
-func Login(login CmdLogin) (resp interface{}, err error) {
+func Login(login CmdLogin) (resp rsp.Response, err error) {
 	log.Println("Loggin in..")
 	log.Println("Registry: ", login.URL)
 	log.Println("Username: ", login.Username)

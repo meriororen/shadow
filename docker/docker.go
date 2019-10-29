@@ -17,7 +17,6 @@ import (
 
 type Docker struct {
 	Client           *client.Client
-	ResponseChan     chan rsp.Response
 	savedCredentials types.AuthConfig
 }
 
@@ -26,12 +25,12 @@ var Default *Docker
 func Init() (*Docker, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
-		log.Fatal("Cannot initialize client: ", err)
+		log.Println("Cannot initialize client: ", err)
+		return nil, err
 	}
 
 	return &Docker{
-		Client:       cli,
-		ResponseChan: make(chan rsp.Response),
+		Client: cli,
 	}, nil
 }
 
@@ -46,7 +45,7 @@ func attemptLogin(creds types.AuthConfig) (idtoken string, err error) {
 	return res.IdentityToken, nil
 }
 
-func (d *Docker) RegistryLogin(url string, user string, pass string, token string) (interface{}, error) {
+func (d *Docker) RegistryLogin(url string, user string, pass string, token string) (rsp.Response, error) {
 	creds := types.AuthConfig{
 		ServerAddress: url,
 		Username:      user,
@@ -55,7 +54,7 @@ func (d *Docker) RegistryLogin(url string, user string, pass string, token strin
 	}
 
 	if idtoken, err := attemptLogin(creds); err != nil {
-		return "", err
+		return rsp.Response{}, err
 	} else {
 		d.savedCredentials = creds
 
@@ -67,10 +66,10 @@ func (d *Docker) RegistryLogin(url string, user string, pass string, token strin
 		}
 	}
 
-	return "Login Successful", nil
+	return rsp.Response{Type: "login"}, nil
 }
 
-func (d *Docker) ImagePull(imageName string) (interface{}, error) {
+func (d *Docker) ImagePull(imageName string) (rsp.Response, error) {
 	auth := types.AuthConfig{
 		Username: d.savedCredentials.Username,
 		Password: d.savedCredentials.Password,
@@ -78,27 +77,29 @@ func (d *Docker) ImagePull(imageName string) (interface{}, error) {
 
 	var strauth string
 	if encauth, err := json.Marshal(auth); err != nil {
-		return nil, err
+		return rsp.Response{}, err
 	} else {
 		strauth = base64.URLEncoding.EncodeToString(encauth)
 	}
 
 	out, err := d.Client.ImagePull(context.Background(), imageName, types.ImagePullOptions{RegistryAuth: strauth})
 	if err != nil {
-		log.Fatal("Cannot image pull")
+		log.Println("Cannot image pull")
+		return rsp.Response{}, err
 	}
 	defer out.Close()
 
 	io.Copy(os.Stdout, out)
 
-	return "Success Pulled", nil
+	return rsp.Response{Type: "pull"}, nil
 
 }
 
-func (d *Docker) ImageList(imageName string) (interface{}, error) {
+func (d *Docker) ImageList(imageName string) (rsp.Response, error) {
 	images, err := d.Client.ImageList(context.Background(), types.ImageListOptions{})
 	if err != nil {
-		log.Fatal("Cannot list out all images: ", err)
+		log.Println("Cannot list out all images: ", err)
+		return rsp.Response{}, err
 	}
 
 	log.Println("Listing image for: ", imageName)
@@ -124,15 +125,15 @@ func (d *Docker) ImageList(imageName string) (interface{}, error) {
 	}
 
 	log.Println(imgs)
-	d.ResponseChan <- rsp.Response{Type: "listimages", Payload: imgs}
 
-	return "Success List Image", nil
+	return rsp.Response{Type: "listimages", Payload: imgs}, nil
 }
 
-func (d *Docker) ContainerList(imageID string) (interface{}, error) {
+func (d *Docker) ContainerList(imageID string) (rsp.Response, error) {
 	containers, err := d.Client.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
-		log.Fatal("Cannot get container list : ", err)
+		log.Println("Cannot get container list : ", err)
+		return rsp.Response{}, nil
 	}
 
 	log.Println("Listing container for: ", imageID)
@@ -159,17 +160,16 @@ func (d *Docker) ContainerList(imageID string) (interface{}, error) {
 	}
 
 	log.Println(cnts)
-	d.ResponseChan <- rsp.Response{Type: "listcontainers", Payload: cnts}
 
-	return "Listed Container", nil
+	return rsp.Response{Type: "listcontainers", Payload: cnts}, nil
 }
 
-func (d *Docker) ContainerStart(imageName string) (interface{}, error) {
+func (d *Docker) ContainerStart(imageName string) (rsp.Response, error) {
 
-	return "Started Container", nil
+	return rsp.Response{Type: "start"}, nil
 }
 
-func (d *Docker) ContainerStop(id string) (interface{}, error) {
+func (d *Docker) ContainerStop(id string) (rsp.Response, error) {
 
-	return "Stopped Container", nil
+	return rsp.Response{Type: "stop"}, nil
 }

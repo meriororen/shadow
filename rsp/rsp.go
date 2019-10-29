@@ -5,8 +5,9 @@ import (
 )
 
 type Response struct {
-	Type    string
-	Payload interface{}
+	Type    string      `json:"type"`
+	Error   string      `json:"error,omitempty"`
+	Payload interface{} `json:"payload,omitempty"`
 }
 
 type PullProgress struct {

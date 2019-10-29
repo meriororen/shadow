@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"shadow/cmd"
-	"shadow/docker"
+	//	"shadow/docker"
 	"shadow/env"
 	"shadow/mqtt"
-	//	"shadow/rsp"
+	"shadow/rsp"
 	"shadow/status"
 	"shadow/watcher"
 
@@ -34,27 +34,38 @@ func commandExecutor(command cmd.Command) {
 		close(erc)
 	}()
 
+	var err error
+	var theresp []byte
 	select {
 	case result := <-rsc:
-		log.Println("Result of cmd ", command, " -> ", result)
-	case err := <-erc:
-		log.Println("Error running cmd ", command, " -> ", err)
+		resp := result.(rsp.Response)
+		log.Println("Result of cmd ", resp.Type, " -> ", resp.Payload)
+		log.Println("Got response for ", resp.Type, "->", resp.Payload)
+
+		if theresp, err = json.Marshal(resp.Payload); err != nil {
+			log.Println("MQTTMON: Cannot marshal response struct")
+		}
+	case er := <-erc:
+		log.Println("Error running cmd ", command, " -> ", er)
+
+		errsp := rsp.Response{
+			Type:  command.Type,
+			Error: er.Error(),
+		}
+
+		if theresp, err = json.Marshal(errsp); err != nil {
+			log.Println("MQTTMON: Cannot marshal error")
+		}
+	}
+
+	if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, false, theresp); token.Wait() && token.Error() != nil {
+		log.Println("MQTTMON: Cannot publish response")
 	}
 }
 
 func MqttMonitor() {
-	var err error
 	for {
 		select {
-		case resp := <-docker.Default.ResponseChan:
-			log.Println("Got response for ", resp.Type, "->", resp.Payload)
-			var theresp []byte
-			if theresp, err = json.Marshal(resp.Payload); err != nil {
-				log.Println("MQTTMON: Cannot marshal response struct")
-			}
-			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, false, theresp); token.Wait() && token.Error() != nil {
-				log.Println("MQTTMON: Cannot publish response")
-			}
 		case stat := <-watcher.Default.StatusChan:
 			//log.Println("Sending Status")
 			var thestatus string
