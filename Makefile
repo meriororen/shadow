@@ -1,12 +1,13 @@
-export APPS ?= $(shell cd app && ls -d */ | grep -oh "[^\/]\+")
 export VERSION ?= $(shell git show -q --format=%h)
-export GITLAB = registry.gitlab.com/sangkuriang-dev
+export APPS ?= $(shell cd app && ls -d */ | grep -oh "[^\/]\+")
+export GITLAB = registry.gitlab.com/dekape
 
 IMAGE = ${GITLAB}/shadow/$(app)
 PROJ = shadow
 OSFLAG = linux
 
 ifeq (${ENV},production)
+CFLAGS = arm-linux-gnueabihf-gcc
 ARMVERSION = 7
 ARCHFLAG = arm
 RETAG=latest
@@ -26,8 +27,10 @@ endif
 
 all: compile
 
-dep:
-	dep ensure -v --vendor-only
+dependencies:
+	@$(foreach app, $(APPS), \
+		echo getting dependencies for "$(app)" for "$(ENV)"; \
+	  cd app/$(app) && go get -v -d  && cd ../../;)
 
 checkenv:
 ifeq (${ENV},)
@@ -40,7 +43,7 @@ ifeq (${ENV},production)
 endif
 	@$(foreach app, $(APPS), \
 		echo compiling "$(app)" for "$(ENV)" in arch=$(ARCHFLAG); \
-		GOOS=$(OSFLAG) CGO_ENABLED=0 GOARCH=$(ARCHFLAG) GOARM=$(ARMVERSION) go build -v -o $(PROJ)-$(app) app/$(app)/main.go;)
+		GOOS=$(OSFLAG) CGO_ENABLED=0 GOARCH=$(ARCHFLAG) GOARM=$(ARMVERSION) CC=$(CFLAGS) go build -v -o $(PROJ)-$(app) app/$(app)/main.go;)
 
 build: checkenv
 	@$(foreach app, $(APPS), \
@@ -49,7 +52,7 @@ build: checkenv
 
 latest: 
 	@$(foreach app, $(APPS), \
-		echo tagging image for "$(app) $(IMAGE):$(VERSION)" for "$(ENV)" as latest; \
+		echo tagging image for "$(app) $(IMAGE):$(VERSION)" for "$(ENV)" as $(RETAG); \
 		docker tag $(IMAGE):$(VERSION) $(IMAGE):$(RETAG);)
 
 push: latest
@@ -69,4 +72,4 @@ endif
 clean:
 	rm -rf $(PROJ)-backend
 
-.PHONY: app
+.PHONY: all dependencies checkenv compile build latest push start clean

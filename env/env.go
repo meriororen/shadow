@@ -9,5 +9,5 @@ type Env struct {
 var Default Env
 
 func Init() {
-	Default.Topicprefix = "/sensornetwork/" + os.Getenv("VENDOR_ID") + "/" + os.Getenv("TERMINAL_ID")
+	Default.Topicprefix = "sensornetwork/" + os.Getenv("VENDOR_ID") + "/" + os.Getenv("TERMINAL_ID")
 }

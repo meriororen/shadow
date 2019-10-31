@@ -140,8 +140,6 @@ func (d *Docker) ImageList(imageName string) (rsp.Response, error) {
 		}
 	}
 
-	log.Println(imgs)
-
 	return rsp.Response{Type: "listimages", Payload: imgs}, nil
 }
 
@@ -174,8 +172,6 @@ func (d *Docker) ContainerList(imageID string) (rsp.Response, error) {
 			}
 		}
 	}
-
-	log.Println(cnts)
 
 	return rsp.Response{Type: "listcontainers", Payload: cnts}, nil
 }

@@ -1,10 +1,10 @@
 FROM golang:1.13-buster as builder
 WORKDIR /go/src
 COPY . ./shadow/
-RUN apt-get update && apt-get install -yq gcc make go-dep
+RUN apt-get update && apt-get install -yq gcc make
 ARG ENV
 ARG ARCHFLAG
-RUN cd shadow && dep ensure -v
+RUN make -C shadow dependencies
 RUN make -C shadow compile
 
 FROM arm32v7/alpine as app

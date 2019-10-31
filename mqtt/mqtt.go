@@ -37,12 +37,13 @@ func NewClient(broker string, user string, pass string, clientid string, cert st
 
 		c = pmg.NewClient(opts)
 		if token := c.Connect(); token.Wait() && token.Error() != nil {
-			panic(token.Error())
+			log.Println(token.Error())
 		}
 		log.Println("Started with Mqtt client_id ", clientid)
 		return c
+	} else {
+		log.Println("Broker is None")
 	}
-	log.Println("Broker is None")
 
 	return nil
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	//	"syscall"
+	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 
@@ -69,24 +71,22 @@ func Init() *Watcher {
 	return wt
 }
 
-/*
-	Spec:
-	Should pull if there's newer image, iff autopull is enabled on watchlist image
-	Should pull if there's pull command on watchlist image
-*/
-
 func (w *Watcher) WatchImages() {
-	//for _, itw := range w.WatchConfigList {
-	// wait for status from each goroutine
 	log.Println("Waiting..")
 	wg.Wait()
-	//}
 }
 
 func getSystemStatus() (status.System, error) {
 	ms, err := memory.Get()
 	if err != nil {
 		log.Fatal("SystemStat: Cannot get memory status")
+	}
+
+	wlan := os.Getenv("WIFI_INTERFACE_NAME")
+	ma, err := ioutil.ReadFile("/sys/class/net/" + wlan + "/address")
+	if err != nil {
+		log.Println("Cannot get mac address")
+		ma = []byte("Error")
 	}
 
 	return status.System{
@@ -96,12 +96,10 @@ func getSystemStatus() (status.System, error) {
 			Used:   ms.Used,
 			Cached: ms.Cached,
 		},
+		MacAddress: string(ma),
 	}, nil
 }
 
-/*
-	Spec:
-*/
 func (w *Watcher) WatchContainer() {
 	for _, actor := range w.WatchList {
 		for cont := range actor.ContainerIDs {
@@ -111,12 +109,7 @@ func (w *Watcher) WatchContainer() {
 }
 
 func (w *Watcher) WatchAll() {
-	//for {
-	//	log.Println("here")
 	w.WatchImages()
-	//	log.Println("and there")
-	//	w.WatchContainer()
-	//}
 }
 
 func (w *Watcher) isInWatchConfigList(imageName string) int {
@@ -138,16 +131,6 @@ func (w *Watcher) AddImageToWatch(config WatchConfig) {
 	go func() {
 		for {
 			select {
-			/*
-				case command, ok := <-config.CommandChan:
-					if !ok {
-						log.Println("Goroutine for", config.ImageName, "is done")
-						wg.Done()
-						return
-					}
-					//log.Println("Got command for ", config.ImageName, "->", command)
-					w.CommandExecutor(command, &config)
-			*/
 			case <-time.After(config.HBPeriod):
 				//log.Println("HB for", config.ImageName)
 

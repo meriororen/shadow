@@ -64,7 +64,7 @@ func commandExecutor(command cmd.Command) {
 			break
 		}
 		resp := result.(rsp.Response)
-		log.Println("Result of cmd ", resp.Type, " -> ", resp.Payload)
+		//log.Println("Result of cmd ", resp.Type, " -> ", resp.Payload)
 
 		if theresp, err = json.Marshal(resp.Payload); err != nil {
 			log.Println("MQTTMON: Cannot marshal response struct")
@@ -142,14 +142,6 @@ func CommandHandler(client pmg.Client, msg pmg.Message) {
 	}
 
 	watcher.Default.CommandChan <- cmd.Command{Type: command, Payload: msg.Payload()}
-
-	/*
-		for _, w := range wt.WatchConfigList {
-			if w.ImageName != "System" {
-				w.CommandChan <- cmd.Command{Type: command, Payload: msg.Payload()}
-			}
-		}
-	*/
 }
 
 func MqttSubscribe() {
