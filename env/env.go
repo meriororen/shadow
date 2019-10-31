@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -26,7 +27,7 @@ func Init() {
 	}
 
 	if terminalid = os.Getenv("TERMINAL_ID"); terminalid == "UNPROVISIONED_TERMINAL" {
-		terminalid = string(mac)
+		terminalid = strings.TrimSpace(string(mac))
 	}
 
 	Default.Topicprefix = "sensornetwork/" + os.Getenv("VENDOR_ID") + "/" + terminalid

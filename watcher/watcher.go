@@ -3,6 +3,8 @@ package watcher
 import (
 	"context"
 	"log"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -60,9 +62,14 @@ func Init() *Watcher {
 		CommandChan:     make(chan cmd.Command),
 	}
 
+	syshbp := 20
+	if hbpstr := os.Getenv("SYSTEM_HB_PERIOD_S"); hbpstr != "" {
+		syshbp, _ = strconv.Atoi(hbpstr)
+	}
+
 	wt.AddImageToWatch(WatchConfig{
 		ImageName: "System",
-		HBPeriod:  3 * time.Second,
+		HBPeriod:  time.Duration(syshbp) * time.Second,
 	})
 
 	return wt
@@ -110,6 +117,23 @@ func (w *Watcher) isInWatchConfigList(imageName string) int {
 	return -1
 }
 
+func statusHeartbeat(imageName string) (status.Status, error) {
+	stat := status.Status{
+		LocalTime: time.Now().Local(),
+	}
+	if imageName == "System" {
+		if ss, err := getSystemStatus(); err != nil {
+			log.Println("Error getting system status:", err)
+			return status.Status{}, err
+		} else {
+			stat.Payload = ss
+		}
+	} else {
+		// TODO: container status
+	}
+	return stat, nil
+}
+
 func (w *Watcher) AddImageToWatch(config WatchConfig) {
 	if w.isInWatchConfigList(config.ImageName) == -1 {
 		w.WatchConfigList = append(w.WatchConfigList, config)
@@ -118,26 +142,19 @@ func (w *Watcher) AddImageToWatch(config WatchConfig) {
 	// dispatch a goroutine for each watched item
 	wg.Add(1)
 	go func() {
+		/* always send first time */
+		status, _ := statusHeartbeat(config.ImageName)
+		w.StatusChan <- status
+
 		for {
 			select {
 			case <-time.After(config.HBPeriod):
 				//log.Println("HB for", config.ImageName)
-
-				status := status.Status{
-					LocalTime: time.Now().Local(),
-				}
-				if config.ImageName == "System" {
-					if ss, err := getSystemStatus(); err != nil {
-						log.Println("Error getting system status:", err)
-						break
-					} else {
-						status.Payload = ss
-					}
+				if s, err := statusHeartbeat(config.ImageName); err == nil {
+					w.StatusChan <- s
 				} else {
-					// TODO: container status
+					break
 				}
-
-				w.StatusChan <- status
 			}
 		}
 	}()

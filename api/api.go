@@ -150,6 +150,7 @@ func MqttSubscribe() {
 	}
 
 	for topic, topicHandler := range topics {
+		log.Println("Subscribing to: ", env.Default.Topicprefix+topic)
 		mqtt.Default.Subscribe(env.Default.Topicprefix+topic, 0, topicHandler)
 	}
 }

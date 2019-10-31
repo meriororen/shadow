@@ -108,6 +108,7 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			return "Failed to log in", err
 		}
 	case "listimages":
+		log.Println("listimage")
 		var pl string
 		if cmd.Payload == nil {
 			pl = ""
