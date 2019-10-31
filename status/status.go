@@ -15,8 +15,7 @@ type Memory struct {
 }
 
 type System struct {
-	CPU        string `json:"cpu,omitempty"`
-	Uname      string `json:"uname,omitempty"`
-	Memory     Memory `json:"memory,omitempty"`
-	MacAddress string `json:"mac_address"`
+	CPU    string `json:"cpu,omitempty"`
+	Uname  string `json:"uname,omitempty"`
+	Memory Memory `json:"memory,omitempty"`
 }

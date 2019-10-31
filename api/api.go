@@ -156,8 +156,6 @@ func MqttSubscribe() {
 
 func Serve() {
 	MqttSubscribe()
-
 	MqttMonitor()
-
 	watcher.Default.WatchAll()
 }

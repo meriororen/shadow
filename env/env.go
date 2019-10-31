@@ -1,6 +1,12 @@
 package env
 
-import "os"
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"time"
+)
 
 type Env struct {
 	Topicprefix string
@@ -9,5 +15,19 @@ type Env struct {
 var Default Env
 
 func Init() {
-	Default.Topicprefix = "sensornetwork/" + os.Getenv("VENDOR_ID") + "/" + os.Getenv("TERMINAL_ID")
+	var terminalid string
+
+	wlan := os.Getenv("WIFI_INTERFACE_NAME")
+	mac, err := ioutil.ReadFile("/sys/class/net/" + wlan + "/address")
+
+	if err != nil {
+		log.Println("Cannot get mac address")
+		mac = []byte(fmt.Sprintf("Unknown_Mac_%d", time.Now().Unix()))
+	}
+
+	if terminalid = os.Getenv("TERMINAL_ID"); terminalid == "UNPROVISIONED_TERMINAL" {
+		terminalid = string(mac)
+	}
+
+	Default.Topicprefix = "sensornetwork/" + os.Getenv("VENDOR_ID") + "/" + terminalid
 }

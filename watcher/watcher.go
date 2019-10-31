@@ -3,9 +3,6 @@ package watcher
 import (
 	"context"
 	"log"
-	//	"syscall"
-	"io/ioutil"
-	"os"
 	"sync"
 	"time"
 
@@ -82,13 +79,6 @@ func getSystemStatus() (status.System, error) {
 		log.Fatal("SystemStat: Cannot get memory status")
 	}
 
-	wlan := os.Getenv("WIFI_INTERFACE_NAME")
-	ma, err := ioutil.ReadFile("/sys/class/net/" + wlan + "/address")
-	if err != nil {
-		log.Println("Cannot get mac address")
-		ma = []byte("Error")
-	}
-
 	return status.System{
 		Memory: status.Memory{
 			Total:  ms.Total,
@@ -96,7 +86,6 @@ func getSystemStatus() (status.System, error) {
 			Used:   ms.Used,
 			Cached: ms.Cached,
 		},
-		MacAddress: string(ma),
 	}, nil
 }
 
