@@ -3,9 +3,8 @@ WORKDIR /go/src
 COPY . ./shadow/
 RUN apk update
 RUN apk add git
-RUN apk add dep
+RUN apk add glide
 RUN apk add make
-RUN apk add gcc
 ARG ENV
 ARG ARCHFLAG
 RUN make -C shadow dependencies
