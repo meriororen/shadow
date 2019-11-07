@@ -10,13 +10,13 @@ import (
 	"shadow/mqtt"
 	"shadow/watcher"
 
-	"github.com/subosito/gotenv"
+	"github.com/joho/godotenv"
 )
 
 var err error
 
 func main() {
-	gotenv.Load("/env/shadow.env", "/env/production.env")
+	_ = godotenv.Load("/env/production.env")
 	env.Init()
 
 	docker.Default, err = docker.Init()

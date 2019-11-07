@@ -22,7 +22,7 @@ func Init() pmg.Client {
 }
 
 func connLostHandler(c pmg.Client, err error) {
-	fmt.Printf("Connection lost, reason: %v\n", err)
+	panic("Mqtt connection lost")
 }
 
 //NewClient create new client instance for mqtt

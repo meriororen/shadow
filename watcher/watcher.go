@@ -87,7 +87,7 @@ func getSystemStatus() (status.System, error) {
 	}
 
 	return status.System{
-		Memory: status.Memory{
+		Memory: status.SystemMemory{
 			Total:  ms.Total,
 			Free:   ms.Free,
 			Used:   ms.Used,

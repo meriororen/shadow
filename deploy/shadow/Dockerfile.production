@@ -7,8 +7,10 @@ ARG ARCHFLAG
 RUN make -C shadow dependencies
 RUN make -C shadow compile
 
-FROM arm32v7/alpine as app
+FROM arm32v7/docker:dind as app
 WORKDIR /cbi
+VOLUME /usr/bin/qemu-arm-static:/usr/bin/qemu-arm-static
+RUN apk add --update docker-compose
 COPY ./deploy/shadow/env.production .env
 COPY --from=builder /go/src/shadow/shadow-shadow shadow
 CMD ["/cbi/shadow"]

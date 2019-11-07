@@ -4,23 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os/exec"
 	"strings"
 
 	"shadow/docker"
+	"shadow/rsp"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/go-connections/nat"
-	//	"github.com/docker/docker/api/types"
-	//"github.com/docker/docker/client"
 )
 
 type Command struct {
 	Type         string
 	ProgressChan chan []byte
 	Payload      []byte
+}
+
+type CmdShell struct {
+	Cmd string `json:"cmd"`
 }
 
 type CmdPull struct {
@@ -80,6 +84,27 @@ func parseMountPoints(volumes []string) (res []mount.Mount) {
 
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 	switch cmd.Type {
+	case "shell":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
+
+		shellcmd := CmdShell{}
+		if err := json.Unmarshal(cmd.Payload, &shellcmd); err != nil {
+			log.Println("Unprocessable pull payload", err)
+		}
+
+		cmds := strings.Split(shellcmd.Cmd, " ")
+
+		rs := rsp.Response{}
+		rs.Type = "shell"
+		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
+		if err != nil {
+			rs.Error = err.Error()
+		}
+		fmt.Println(string(out))
+		rs.Payload = rsp.RspShell{Output: string(out)}
+		return rs, nil
 	case "pull":
 		if cmd.Payload == nil {
 			return "", fmt.Errorf("Error executing command, payload must not be empty!")

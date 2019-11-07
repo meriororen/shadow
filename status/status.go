@@ -7,7 +7,7 @@ type Status struct {
 	Payload   interface{}
 }
 
-type Memory struct {
+type SystemMemory struct {
 	Total  uint64 `json:"total"`
 	Free   uint64 `json:"free"`
 	Used   uint64 `json:"used"`
@@ -15,7 +15,9 @@ type Memory struct {
 }
 
 type System struct {
-	CPU    string `json:"cpu,omitempty"`
-	Uname  string `json:"uname,omitempty"`
-	Memory Memory `json:"memory,omitempty"`
+	CPUTemp       string              `json:"cputemp,omitempty"`
+	Memory        SystemMemory        `json:"memory,omitempty"`
+	WANIP         string              `json:"wanip,omitempty"`
+	ServiceUptime []map[string]string `json:"uptime,omitempty"`
+	SystemUptime  string              `json:"sysuptime,omitempty"`
 }

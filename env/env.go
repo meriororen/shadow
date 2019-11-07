@@ -26,9 +26,9 @@ func Init() {
 		mac = []byte(fmt.Sprintf("Unknown_Mac_%d", time.Now().Unix()))
 	}
 
-	if terminalid = os.Getenv("TERMINAL_ID"); terminalid == "UNPROVISIONED_TERMINAL" {
+	if terminalid = os.Getenv("TID"); terminalid == "UNPROVISIONED_TERMINAL" {
 		terminalid = strings.TrimSpace(string(mac))
 	}
 
-	Default.Topicprefix = "sensornetwork/" + os.Getenv("VENDOR_ID") + "/" + terminalid
+	Default.Topicprefix = "sensornetwork/" + os.Getenv("VID") + "/" + terminalid
 }

@@ -14,6 +14,10 @@ type PullProgress struct {
 	Percentage int `json:"percentage"`
 }
 
+type RspShell struct {
+	Output string `json:"output"`
+}
+
 type RspPull struct {
 	Status   string       `json:"status"`
 	Progress PullProgress `json:"progress"`
