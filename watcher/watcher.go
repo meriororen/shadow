@@ -94,8 +94,20 @@ func (w *Watcher) getSystemStatus() (status.System, error) {
 		log.Fatal("SystemStat: Cannot get memory status")
 	}
 
+	cputemp, err := CheckCpuTemp()
+	if err != nil {
+		log.Fatal("SystemStat: Cannot get Cpu temperature", err)
+	}
+
+	sysuptime, err := CheckUpTime()
+	if err != nil {
+		log.Fatal("Cannot check System Uptime")
+	}
+
 	return status.System{
-		WanIp: w.WanIp,
+		WanIp:        w.WanIp,
+		CpuTemp:      cputemp,
+		SystemUpTime: sysuptime,
 		Memory: status.SystemMemory{
 			Total: ms.Total,
 			Free:  ms.Free,

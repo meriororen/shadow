@@ -18,9 +18,9 @@ type SystemMemory struct {
 }
 
 type System struct {
-	CPUTemp       string              `json:"cputemp,omitempty"`
+	CpuTemp       float32             `json:"cputemp,omitempty"`
 	Memory        SystemMemory        `json:"memory,omitempty"`
 	WanIp         string              `json:"wanip,omitempty"`
-	ServiceUptime []map[string]string `json:"uptime,omitempty"`
-	SystemUptime  string              `json:"sysuptime,omitempty"`
+	ServiceUpTime []map[string]string `json:"uptime,omitempty"`
+	SystemUpTime  string              `json:"sysuptime,omitempty"`
 }

@@ -5,7 +5,7 @@ import (
 )
 
 func TestFetchWanIP(t *testing.T) {
-	if ip, err := FetchWanIP(); err != nil {
+	if ip, err := FetchWanIp(); err != nil {
 		t.Error("Error: ", err)
 	} else {
 		t.Log("Fetched IP: ", ip)
