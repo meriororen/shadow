@@ -1,7 +1,9 @@
-FROM golang:1.13-buster as builder
+FROM golang:1.13-alpine3.10 as builder
 WORKDIR /go/src
 COPY . ./shadow/
-RUN apt-get update && apt-get install -yq gcc make golang-glide
+RUN apk add --update git
+RUN apk add --update glide
+RUN apk add --update make
 ARG ENV
 ARG ARCHFLAG
 RUN make -C shadow dependencies
@@ -9,8 +11,9 @@ RUN make -C shadow compile
 
 FROM arm32v7/docker:dind as app
 WORKDIR /cbi
-VOLUME /usr/bin/qemu-arm-static:/usr/bin/qemu-arm-static
+COPY deploy/shadow/qemu-arm-static /usr/bin/
 RUN apk add --update docker-compose
+RUN rm -rf /usr/bin/qemu-arm-static
 COPY ./deploy/shadow/env.production .env
 COPY --from=builder /go/src/shadow/shadow-shadow shadow
 CMD ["/cbi/shadow"]
