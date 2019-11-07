@@ -1,0 +1,23 @@
+package: shadow
+import:
+- package: github.com/docker/docker
+  version: v17.05.0-ce-rc3
+  subpackages:
+  - api/types
+  - api/types/container
+  - api/types/mount
+  - api/types/network
+  - api/types/registry
+  - api/types/strslice
+  - client
+- package: github.com/docker/go-connections
+  version: v0.4.0
+  subpackages:
+  - nat
+- package: github.com/eclipse/paho.mqtt.golang
+  version: v1.2.0
+- package: github.com/joho/godotenv
+  version: v1.3.0
+- package: github.com/mackerelio/go-osstat
+  subpackages:
+  - memory

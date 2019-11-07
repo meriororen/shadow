@@ -28,9 +28,8 @@ endif
 all: compile
 
 dependencies:
-	@$(foreach app, $(APPS), \
-		echo getting dependencies for "$(app)" for "$(ENV)"; \
-	  cd app/$(app) && go get -v -d  && cd ../../;)
+	@echo "Make sure golang-glide is installed"
+	glide install --strip-vendor
 
 checkenv:
 ifeq (${ENV},)

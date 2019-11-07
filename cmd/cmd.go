@@ -186,12 +186,12 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			Image:        runcmd.ImageName,
 			Env:          runcmd.Env,
 			Cmd:          runcmd.Cmd,
-			ExposedPorts: exposedPorts,
+			ExposedPorts: nat.PortSet(exposedPorts),
 		}
 
 		hcfg := container.HostConfig{
 			Privileged:   runcmd.HostPrivileged,
-			PortBindings: bindings,
+			PortBindings: nat.PortMap(bindings),
 			Mounts:       mountBindings,
 		}
 

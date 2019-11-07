@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-func FetchWanIP() (string, error) {
+func FetchWanIp() (string, error) {
 	che := make(chan error)
 	chr := make(chan string)
 
 	go func() {
-		resp, err := http.Get("ifconfig.me")
+		resp, err := http.Get("http://ifconfig.me")
 		if err != nil {
 			che <- err
 		}
@@ -23,7 +23,7 @@ func FetchWanIP() (string, error) {
 			che <- err
 		}
 
-		chr <- body
+		chr <- string(body)
 	}()
 
 	select {
@@ -32,6 +32,6 @@ func FetchWanIP() (string, error) {
 	case res := <-chr:
 		return res, nil
 	case <-time.After(5 * time.Second):
-		return "", fmt.Error("Timeout waiting for wan IP")
+		return "", fmt.Errorf("Timeout waiting for wan IP")
 	}
 }

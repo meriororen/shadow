@@ -2,10 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
+	//	"fmt"
 	"log"
 	"strings"
-	"time"
+	//	"time"
 
 	"shadow/cmd"
 	"shadow/env"
@@ -96,18 +96,13 @@ func MqttMonitor() {
 				if !ok {
 					return
 				}
-				//log.Println("Sending Status")
-				var thestatus string
-				switch v := stat.Payload.(type) {
-				case status.System:
-					thestatus = fmt.Sprintf("time: %s, total: %d, free: %d, cached: %d, used: %d",
-						stat.LocalTime.Format(time.RFC3339),
-						v.Memory.Total,
-						v.Memory.Free,
-						v.Memory.Cached,
-						v.Memory.Used)
+				if stat == status.NilStatus {
+					break
 				}
-				//log.Println("publishing to ", env.Default.Topicprefix+"/status")
+
+				thestatus, _ := json.Marshal(stat)
+				log.Println(string(thestatus))
+
 				if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, false, thestatus); token.Wait() && token.Error() != nil {
 					log.Println("MQTTMON: Cannot publish status")
 				}

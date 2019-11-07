@@ -31,6 +31,7 @@ type Watcher struct {
 	WatchConfigList []WatchConfig
 	StatusChan      chan status.Status
 	CommandChan     chan cmd.Command
+	WanIp           string
 
 	heartBeatPeriod time.Duration
 }
@@ -62,14 +63,21 @@ func Init() *Watcher {
 		CommandChan:     make(chan cmd.Command),
 	}
 
-	syshbp := 20
+	syshbp := 20 // default system heartbeat
 	if hbpstr := os.Getenv("SYSTEM_HB_PERIOD_S"); hbpstr != "" {
 		syshbp, _ = strconv.Atoi(hbpstr)
 	}
 
+	wanIpPollPeriod := 300 // default wanip poll
+
 	wt.AddImageToWatch(WatchConfig{
 		ImageName: "System",
 		HBPeriod:  time.Duration(syshbp) * time.Second,
+	})
+
+	wt.AddImageToWatch(WatchConfig{
+		ImageName: "WanIp",
+		HBPeriod:  time.Duration(wanIpPollPeriod) * time.Second,
 	})
 
 	return wt
@@ -80,18 +88,19 @@ func (w *Watcher) WatchImages() {
 	wg.Wait()
 }
 
-func getSystemStatus() (status.System, error) {
+func (w *Watcher) getSystemStatus() (status.System, error) {
 	ms, err := memory.Get()
 	if err != nil {
 		log.Fatal("SystemStat: Cannot get memory status")
 	}
 
 	return status.System{
+		WanIp: w.WanIp,
 		Memory: status.SystemMemory{
-			Total:  ms.Total,
-			Free:   ms.Free,
-			Used:   ms.Used,
-			Cached: ms.Cached,
+			Total: ms.Total,
+			Free:  ms.Free,
+			//			Used:   ms.Used,
+			//			Cached: ms.Cached,
 		},
 	}, nil
 }
@@ -117,19 +126,29 @@ func (w *Watcher) isInWatchConfigList(imageName string) int {
 	return -1
 }
 
-func statusHeartbeat(imageName string) (status.Status, error) {
+func (w *Watcher) statusPoll(imageName string) (status.Status, error) {
 	stat := status.Status{
 		LocalTime: time.Now().Local(),
 	}
-	if imageName == "System" {
-		if ss, err := getSystemStatus(); err != nil {
+	switch imageName {
+	case "System":
+		if ss, err := w.getSystemStatus(); err != nil {
 			log.Println("Error getting system status:", err)
-			return status.Status{}, err
+			return status.NilStatus, err
 		} else {
+			stat.Type = "System"
 			stat.Payload = ss
 		}
-	} else {
-		// TODO: container status
+	case "WanIp": /* doesn't need to return status */
+		if ip, err := FetchWanIp(); err != nil {
+			log.Println(err)
+			return status.NilStatus, err
+		} else {
+			w.WanIp = ip
+			return status.NilStatus, nil
+		}
+	default:
+		// container status
 	}
 	return stat, nil
 }
@@ -143,14 +162,15 @@ func (w *Watcher) AddImageToWatch(config WatchConfig) {
 	wg.Add(1)
 	go func() {
 		/* always send first time */
-		status, _ := statusHeartbeat(config.ImageName)
-		w.StatusChan <- status
+		if status, err := w.statusPoll(config.ImageName); err == nil {
+			w.StatusChan <- status
+		}
 
 		for {
 			select {
 			case <-time.After(config.HBPeriod):
 				//log.Println("HB for", config.ImageName)
-				if s, err := statusHeartbeat(config.ImageName); err == nil {
+				if s, err := w.statusPoll(config.ImageName); err == nil {
 					w.StatusChan <- s
 				} else {
 					break
