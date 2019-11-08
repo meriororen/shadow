@@ -36,7 +36,7 @@ func commandExecutor(command cmd.Command) {
 						if !ok {
 							return
 						}
-						if token := mqtt.Default.Publish(env.Default.Topicprefix+"/progress", 0, false, progress); token.Wait() && token.Error() != nil {
+						if token := mqtt.Default.Publish(env.Default.Topicprefix+"/progress", 0, true, progress); token.Wait() && token.Error() != nil {
 							log.Println("MQTTMON: Cannot publish progress")
 						}
 					}
@@ -82,7 +82,7 @@ func commandExecutor(command cmd.Command) {
 		}
 	}
 
-	if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, false, theresp); token.Wait() && token.Error() != nil {
+	if token := mqtt.Default.Publish(env.Default.Topicprefix+"/response", 0, true, theresp); token.Wait() && token.Error() != nil {
 		log.Println("MQTTMON: Cannot publish response")
 	}
 }
@@ -105,7 +105,7 @@ func MqttMonitor() {
 				thestatus, _ := json.Marshal(stat)
 				log.Println(string(thestatus))
 
-				if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, false, thestatus); token.Wait() && token.Error() != nil {
+				if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, true, thestatus); token.Wait() && token.Error() != nil {
 					mqttmondiecount++
 					if mqttmondiecount > 9 {
 						panic("Die you already, good-for-nothing!")

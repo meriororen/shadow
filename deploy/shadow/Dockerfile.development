@@ -10,8 +10,9 @@ ARG ARCHFLAG
 RUN make -C shadow dependencies
 RUN make -C shadow compile
 
-FROM alpine:latest as app
+FROM docker:dind as app
 WORKDIR /cbi
+RUN apk add --update docker-compose
 COPY ./deploy/shadow/env.development .env
 COPY --from=builder /go/src/shadow/shadow-shadow shadow
 CMD ["/cbi/shadow"]

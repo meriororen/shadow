@@ -42,7 +42,7 @@ func NewClient(broker string, user string, pass string, clientid string, cert st
 		log.Println("Started with Mqtt client_id ", clientid)
 		return c
 	} else {
-		log.Println("Broker is None")
+		log.Println("Broker is Not Set, please check your env file")
 	}
 
 	return nil

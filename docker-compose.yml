@@ -1,0 +1,16 @@
+version: '2'
+
+services:
+  shadow:
+    image: registry.gitlab.com/dekape/shadow/shadow:devel
+    privileged: true
+    volumes:
+     - /srv:/tmp                         #for database files
+     - /proc:/proc:rw                    #for shutdown
+     - /etc/timezone:/etc/timezone       #for local time
+     - /etc/localtime:/etc/localtime     #for local time
+     - /run/dbus:/run/dbus               #for wpa_supplicant
+     - /dev/bus/usb:/dev/bus/usb         #for usb devices
+     - /env:/env                         #for environment file
+     - /var/run/docker.sock:/var/run/docker.sock
+     - /sys:/sys
