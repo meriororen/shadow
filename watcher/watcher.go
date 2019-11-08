@@ -210,7 +210,7 @@ func (w *Watcher) RemoveImageFromWatchList(imageName string) {
 func (w *Watcher) addImagesToWatchList() {
 	images, err := docker.Default.Client.ImageList(context.Background(), types.ImageListOptions{})
 	if err != nil {
-		log.Fatal("Cannot add image in local to watchlist ", err)
+		log.Println("Cannot add image in local to watchlist ", err)
 	}
 
 	for _, image := range images {
@@ -230,7 +230,7 @@ func (w *Watcher) addImagesToWatchList() {
 func (w *Watcher) addRunningContainersToWatchList() {
 	containers, err := docker.Default.Client.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
-		log.Fatal("Cannot get container list : ", err)
+		log.Println("Cannot get container list : ", err)
 	}
 
 	for _, actor := range w.WatchList {

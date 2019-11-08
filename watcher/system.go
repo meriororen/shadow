@@ -1,10 +1,11 @@
 package watcher
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
-	"os/exec"
 	"strconv"
+	"strings"
 )
 
 func CheckCpuTemp() (float32, error) {
@@ -21,11 +22,17 @@ func CheckCpuTemp() (float32, error) {
 }
 
 func CheckUpTime() (string, error) {
-	cmd := exec.Command("/usr/bin/uptime", "-p")
-	out, err := cmd.Output()
+	out, err := ioutil.ReadFile("/proc/uptime")
 	if err != nil {
 		return "", err
 	} else {
-		return string(out[:len(out)-1]), nil
+		uptime := strings.Split(string(out), " ")
+		uptimef, _ := strconv.ParseFloat(uptime[0], 32)
+		uptimei := int(uptimef)
+		hours := uptimei / (60 * 60)
+		minutes := (uptimei % (60 * 60)) / 60
+		seconds := (uptimei % 60)
+		up := fmt.Sprint(hours, ".", minutes, ".", seconds)
+		return up, nil
 	}
 }
