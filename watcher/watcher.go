@@ -91,17 +91,17 @@ func (w *Watcher) WatchImages() {
 func (w *Watcher) getSystemStatus() (status.System, error) {
 	ms, err := memory.Get()
 	if err != nil {
-		log.Fatal("SystemStat: Cannot get memory status")
+		log.Println("SystemStat: Cannot get memory status")
 	}
 
 	cputemp, err := CheckCpuTemp()
 	if err != nil {
-		log.Fatal("SystemStat: Cannot get Cpu temperature", err)
+		log.Println("SystemStat: Cannot get Cpu temperature", err)
 	}
 
 	sysuptime, err := CheckUpTime()
 	if err != nil {
-		log.Fatal("Cannot check System Uptime")
+		log.Println("Cannot check System Uptime")
 	}
 
 	return status.System{
