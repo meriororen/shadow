@@ -90,6 +90,8 @@ func commandExecutor(command cmd.Command) {
 func MqttMonitor() {
 	// monitor Status
 	go func() {
+		var mqttmondiecount = 0
+
 		for {
 			select {
 			case stat, ok := <-watcher.Default.StatusChan:
@@ -104,7 +106,12 @@ func MqttMonitor() {
 				log.Println(string(thestatus))
 
 				if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, false, thestatus); token.Wait() && token.Error() != nil {
-					log.Println("MQTTMON: Cannot publish status")
+					mqttmondiecount++
+					if mqttmondiecount > 9 {
+						panic("Die you already, good-for-nothing!")
+					} else {
+						log.Println("MQTTMON: Cannot publish status")
+					}
 				}
 			}
 		}
