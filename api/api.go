@@ -61,6 +61,7 @@ func commandExecutor(command cmd.Command) {
 	select {
 	case result := <-rsc:
 		if result == nil {
+			log.Println("result is nil")
 			break
 		}
 		resp := result.(rsp.Response)

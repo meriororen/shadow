@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os/exec"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	"github.com/ghodss/yaml"
 	"github.com/joho/godotenv"
 )
 
@@ -48,7 +50,7 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 
 		envfilecmd := CmdEnvFile{}
 		if err := json.Unmarshal(cmd.Payload, &envfilecmd); err != nil {
-			log.Println("Unprocessable pull payload", err)
+			log.Println("Unprocessable env payload", err)
 		}
 
 		log.Println(envfilecmd)
@@ -80,6 +82,59 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 		if cmd.Payload == nil {
 			return "", fmt.Errorf("Error executing command, payload must not be empty!")
 		}
+
+		composefilecmd := CmdComposeFile{}
+		if err := json.Unmarshal(cmd.Payload, &composefilecmd); err != nil {
+			log.Println("Unprocessable command payload", err)
+		}
+
+		log.Println(composefilecmd)
+
+		if composefilecmd.Path == "" {
+			return nil, fmt.Errorf("Path is null")
+		}
+
+		rsp := rsp.RspComposeFile{Status: "Error"}
+		if composefilecmd.SetGet == "get" {
+			theyaml, err := ioutil.ReadFile(composefilecmd.Path)
+			if err != nil {
+				log.Println(err)
+				return nil, fmt.Errorf("Readfile: ", err)
+			}
+
+			thejson, err := yaml.YAMLToJSON(theyaml)
+			if err != nil {
+				log.Println(err)
+				return nil, fmt.Errorf("YAMLToJson: ", err)
+			}
+
+			rsp.ComposeFile = string(thejson)
+			rsp.Status = "OK"
+		} else if composefilecmd.SetGet == "set" {
+			thejson, err := json.Marshal(composefilecmd.ComposeFile)
+			if err != nil {
+				log.Println(err)
+				return nil, fmt.Errorf("Composefile unmarshal:", err)
+			}
+
+			theyaml, err := yaml.JSONToYAML(thejson)
+			if err != nil {
+				log.Println(err)
+				return nil, fmt.Errorf("JSONToYAML: ", err)
+			}
+
+			err = ioutil.WriteFile(composefilecmd.Path, theyaml, 0644)
+			if err != nil {
+				log.Println(err)
+				return nil, fmt.Errorf("Composefile write:", err)
+			}
+
+			rsp.Status = "OK"
+			rsp.ComposeFile = string(theyaml)
+		}
+
+		rs.Payload = rsp
+		return rs, nil
 	case "shell":
 		if cmd.Payload == nil {
 			return "", fmt.Errorf("Error executing command, payload must not be empty!")

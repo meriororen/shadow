@@ -14,10 +14,10 @@ type CmdEnvFile struct {
 	Env    map[string]string `json:"env,omitempty"`
 }
 
-type CmdComposeYaml struct {
-	SetGet string
-	Path   string
-	Yaml   interface{}
+type CmdComposeFile struct {
+	SetGet      string      `json:"type"`
+	Path        string      `json:"path"`
+	ComposeFile interface{} `json:"composefile,omitempty"`
 }
 
 type CmdShell struct {

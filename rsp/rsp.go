@@ -15,6 +15,11 @@ type RspEnvFile struct {
 	Env    map[string]string `json:"env,omitempty"`
 }
 
+type RspComposeFile struct {
+	Status      string      `json:"status"`
+	ComposeFile interface{} `json:"composefile,omitempty"`
+}
+
 type PullProgress struct {
 	Percentage int `json:"percentage"`
 }
