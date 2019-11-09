@@ -8,22 +8,16 @@ type Command struct {
 	Payload      []byte
 }
 
-type CmdGetEnvFile struct {
-	Path string
+type CmdEnvFile struct {
+	SetGet string            `json:"type"`
+	Path   string            `json:"path"`
+	Env    map[string]string `json:"env,omitempty"`
 }
 
-type CmdSetEnvFile struct {
-	Path    string
-	EnvFile interface{}
-}
-
-type CmdGetComposeYaml struct {
-	Path string
-}
-
-type CmdSetComposeYaml struct {
-	Path        string
-	ComposeYaml interface{}
+type CmdComposeYaml struct {
+	SetGet string
+	Path   string
+	Yaml   interface{}
 }
 
 type CmdShell struct {

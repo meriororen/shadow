@@ -1,1 +1,5 @@
 vendor/
+test.go
+test.log
+Session.vim
+log

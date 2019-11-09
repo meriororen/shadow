@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	"github.com/joho/godotenv"
 )
 
 func parseMountPoints(volumes []string) (res []mount.Mount) {
@@ -36,11 +37,49 @@ func parseMountPoints(volumes []string) (res []mount.Mount) {
 }
 
 func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
+	rs := rsp.Response{}
+	rs.Type = cmd.Type
+
 	switch cmd.Type {
-	case "getenv":
-	case "setenv":
-	case "getcompose":
-	case "setcompose":
+	case "envfile":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
+
+		envfilecmd := CmdEnvFile{}
+		if err := json.Unmarshal(cmd.Payload, &envfilecmd); err != nil {
+			log.Println("Unprocessable pull payload", err)
+		}
+
+		log.Println(envfilecmd)
+
+		if envfilecmd.Path == "" {
+			return nil, fmt.Errorf("Path is null")
+		}
+
+		var currentEnv map[string]string
+		rsp := rsp.RspEnvFile{Status: "Error"}
+		if envfilecmd.SetGet == "get" {
+			currentEnv, err = godotenv.Read(envfilecmd.Path)
+			if err != nil {
+				return nil, fmt.Errorf("env path read: ", err)
+			}
+			rsp.Status = "OK"
+			rsp.Env = currentEnv
+		} else if envfilecmd.SetGet == "set" {
+			err = godotenv.Write(envfilecmd.Env, envfilecmd.Path)
+			if err != nil {
+				return nil, fmt.Errorf("env path write: ", err)
+			}
+			rsp.Status = "OK"
+		}
+
+		rs.Payload = rsp
+		return rs, nil
+	case "composefile":
+		if cmd.Payload == nil {
+			return "", fmt.Errorf("Error executing command, payload must not be empty!")
+		}
 	case "shell":
 		if cmd.Payload == nil {
 			return "", fmt.Errorf("Error executing command, payload must not be empty!")
@@ -53,8 +92,6 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 
 		cmds := strings.Split(shellcmd.Cmd, " ")
 
-		rs := rsp.Response{}
-		rs.Type = "shell"
 		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
 		if err != nil {
 			rs.Error = err.Error()
@@ -86,7 +123,8 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 			log.Println("Unprocessable login payload", err)
 		}
 
-		if res, err = docker.Default.RegistryLogin(logincmd.URL, logincmd.Username, logincmd.Password, logincmd.Token); err != nil {
+		if res, err = docker.Default.RegistryLogin(logincmd.URL, logincmd.Username,
+			logincmd.Password, logincmd.Token); err != nil {
 			return "Failed to log in", err
 		}
 	case "listimages":

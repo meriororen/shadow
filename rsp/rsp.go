@@ -10,6 +10,11 @@ type Response struct {
 	Payload interface{} `json:"payload,omitempty"`
 }
 
+type RspEnvFile struct {
+	Status string            `json:"status"`
+	Env    map[string]string `json:"env,omitempty"`
+}
+
 type PullProgress struct {
 	Percentage int `json:"percentage"`
 }
