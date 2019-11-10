@@ -31,4 +31,10 @@ func Init() {
 	}
 
 	Default.Topicprefix = "sensornetwork/" + os.Getenv("VID") + "/" + terminalid
+
+	var temporary = ""
+	temporary = os.Getenv("RUN_AS_TEMPORARY_CONTAINER")
+	if temporary == "true" {
+		Default.Topicprefix += "/TMP"
+	}
 }

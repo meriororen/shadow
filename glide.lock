@@ -1,5 +1,5 @@
-hash: 8bc4de5f1a1a434c892f2052207b9186a5a7f969d11a506a2c54450abff87005
-updated: 2019-11-07T12:48:02.771709277+07:00
+hash: 3e2aedd1a6cd366b50584b5e40f6ce5ea214c623bcc3f4afcf19e53ecc564ad8
+updated: 2019-11-11T05:30:58.03425491+07:00
 imports:
 - name: github.com/docker/distribution
   version: dee21c0394b5e1e735412461dbd8d3a769e01799
@@ -43,6 +43,8 @@ imports:
   version: adca289fdcf8c883800aafa545bc263452290bae
   subpackages:
   - packets
+- name: github.com/ghodss/yaml
+  version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/joho/godotenv
   version: 23d116af351c84513e1946b527c88823e476be13
 - name: github.com/konsorten/go-windows-terminal-sequences
@@ -74,4 +76,6 @@ imports:
   subpackages:
   - unix
   - windows
+- name: gopkg.in/yaml.v2
+  version: f90ceb4f409096b60e2e9076b38b304b8246e5fa
 testImports: []

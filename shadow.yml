@@ -1,0 +1,24 @@
+version: '2'
+
+services:
+  shadow_tmp:
+     image: registry.gitlab.com/dekape/shadow/shadow:devel
+     container_name: shadow_tmp
+     environment:
+      - RUN_AS_TEMPORARY_CONTAINER=true
+     privileged: true
+     volumes:
+      - /srv:/srv                         #for database files
+      - /proc:/proc:rw                    #for shutdown
+      - /etc/timezone:/etc/timezone       #for local time
+      - /etc/localtime:/etc/localtime     #for local time
+      - /run/dbus:/run/dbus               #for wpa_supplicant
+      - /dev/bus/usb:/dev/bus/usb         #for usb devices
+      - /env:/env                         #for environment file
+      - /var/run/docker:/var/run/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+     networks:
+      - temporary
+
+networks:
+  temporary:
