@@ -15,8 +15,10 @@ import (
 var err error
 
 func main() {
-	_ = godotenv.Load("/env/production.env")
+	_ = godotenv.Load("/env/production.env", "./.env")
 	env.Init()
+
+	log.Println("Started shadow version: ", env.Version)
 
 	docker.Default, err = docker.Init()
 	if err != nil {

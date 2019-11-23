@@ -65,17 +65,18 @@ func commandExecutor(command cmd.Command) {
 			break
 		}
 		resp := result.(rsp.Response)
+		resp.Status = "OK"
 		//log.Println("Result of cmd ", resp.Type, " -> ", resp.Payload)
 
-		if theresp, err = json.Marshal(resp.Payload); err != nil {
+		if theresp, err = json.Marshal(resp); err != nil {
 			log.Println("MQTTMON: Cannot marshal response struct")
 		}
 	case er := <-erc:
 		log.Println("Error running cmd ", command, " -> ", er)
 
 		errsp := rsp.Response{
-			Type:  command.Type,
-			Error: er.Error(),
+			Status: "Error",
+			Error:  er.Error(),
 		}
 
 		if theresp, err = json.Marshal(errsp); err != nil {

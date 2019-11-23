@@ -1,4 +1,5 @@
 export VERSION ?= $(shell git show -q --format=%h)
+export DIRTY ?= $(shell git diff --quiet || echo 'dirty')
 export APPS ?= $(shell cd app && ls -d */ | grep -oh "[^\/]\+")
 export GITLAB = registry.gitlab.com/dekape
 
@@ -27,6 +28,9 @@ endif
 
 all: compile
 
+version:
+	@sed -i 's/Version = "\([0-9\.]\+\)-.*"/Version = "\1-${VERSION}_${DIRTY}"/g' env/env.go
+
 dependencies:
 	@echo "Make sure golang-glide is installed"
 	glide install --strip-vendor
@@ -36,7 +40,7 @@ ifeq (${ENV},)
 	@echo "WARNING! You must set your ENV variable!"
 endif
 
-compile: checkenv
+compile: version checkenv
 ifeq (${ENV},production)
 	#dep ensure -v
 endif

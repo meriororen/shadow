@@ -5,9 +5,14 @@ import (
 )
 
 type Response struct {
-	Type    string      `json:"type"`
+	Type    string      `json:"type,omitempty"`
+	Status  string      `json:"status"`
 	Error   string      `json:"error,omitempty"`
 	Payload interface{} `json:"payload,omitempty"`
+}
+
+type ShadowVersion struct {
+	Version string `json:"version"`
 }
 
 type RspEnvFile struct {

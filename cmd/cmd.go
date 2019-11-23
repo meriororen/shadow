@@ -8,6 +8,8 @@ type Command struct {
 	Payload      []byte
 }
 
+type CmdVersion struct{}
+
 type CmdEnvFile struct {
 	SetGet string            `json:"type"`
 	Path   string            `json:"path"`

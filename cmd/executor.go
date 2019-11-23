@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"shadow/docker"
+	"shadow/env"
 	"shadow/rsp"
 
 	"github.com/docker/docker/api/types/container"
@@ -43,6 +44,9 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 	rs.Type = cmd.Type
 
 	switch cmd.Type {
+	case "version":
+		rs.Payload = rsp.ShadowVersion{Version: env.Version}
+		return rs, nil
 	case "envfile":
 		if cmd.Payload == nil {
 			return "", fmt.Errorf("Error executing command, payload must not be empty!")
@@ -142,7 +146,7 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 
 		shellcmd := CmdShell{}
 		if err := json.Unmarshal(cmd.Payload, &shellcmd); err != nil {
-			log.Println("Unprocessable pull payload", err)
+			log.Println("Unprocessable shell command", err)
 		}
 
 		cmds := strings.Split(shellcmd.Cmd, " ")
@@ -264,6 +268,9 @@ func Exec(cmd Command, args ...interface{}) (res interface{}, err error) {
 		if res, err = docker.Default.ContainerStop(stopcmd.Id); err != nil {
 			return "Error Stopping!", err
 		}
+
+	default:
+		return nil, fmt.Errorf("Unknown Command")
 	}
 
 	return res, nil

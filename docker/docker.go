@@ -71,7 +71,7 @@ func (d *Docker) RegistryLogin(url string, user string, pass string, token strin
 		}
 	}
 
-	return rsp.Response{Type: "login"}, nil
+	return rsp.Response{Type: "login", Payload: "Login success"}, nil
 }
 
 func (d *Docker) ImagePull(imageName string, prg chan []byte) (rsp.Response, error) {
