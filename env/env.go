@@ -13,7 +13,7 @@ type Env struct {
 	Topicprefix string
 }
 
-const Version = "0.0.1-260b87b_dirty"
+const Version = "0.0.1-1eae963_dirty"
 
 var Default Env
 

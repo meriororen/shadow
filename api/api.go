@@ -24,6 +24,7 @@ func commandExecutor(command cmd.Command) {
 	erc := make(chan error)
 	prg := make(chan []byte) // progress channel
 
+	// dispatch executor goroutine
 	go func() {
 		if command.Type == "pull" {
 			command.ProgressChan = prg
@@ -58,6 +59,7 @@ func commandExecutor(command cmd.Command) {
 		err     error
 		theresp []byte
 	)
+
 	select {
 	case result := <-rsc:
 		if result == nil {
@@ -89,51 +91,56 @@ func commandExecutor(command cmd.Command) {
 	}
 }
 
-func MqttMonitor() {
-	// monitor Status
-	go func() {
-		var mqttmondiecount = 0
+func monitorStatus() {
+	var mqttmondiecount = 0
 
-		for {
-			select {
-			case stat, ok := <-watcher.Default.StatusChan:
-				if !ok {
-					return
-				}
-				if stat == status.NilStatus {
-					break
-				}
+	for {
+		select {
+		case stat, ok := <-watcher.Default.StatusChan:
+			if !ok {
+				return
+			}
+			if stat == status.NilStatus {
+				break
+			}
 
-				thestatus, _ := json.Marshal(stat)
-				log.Println(string(thestatus))
+			thestatus, _ := json.Marshal(stat)
+			log.Println(string(thestatus))
 
-				if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, true, thestatus); token.Wait() && token.Error() != nil {
-					mqttmondiecount++
-					if mqttmondiecount > 9 {
-						panic("Die you already, good-for-nothing!")
-					} else {
-						log.Println("MQTTMON: Cannot publish status")
-					}
+			if token := mqtt.Default.Publish(env.Default.Topicprefix+"/status", 0, true, thestatus); token.Wait() && token.Error() != nil {
+				mqttmondiecount++
+				if mqttmondiecount > 9 {
+					panic("Die you already, good-for-nothing!")
+				} else {
+					log.Println("MQTTMON: Cannot publish status")
 				}
 			}
 		}
-	}()
-
-	// monitor command execution
-	go func() {
-		for {
-			select {
-			case command, ok := <-watcher.Default.CommandChan:
-				if !ok {
-					return
-				}
-				commandExecutor(command)
-			}
-		}
-	}()
+	}
 }
 
-func CommandHandler(client pmg.Client, msg pmg.Message) {
+func monitorCommandExecution() {
+	for {
+		select {
+		case command, ok := <-watcher.Default.CommandChan:
+			if !ok {
+				return
+			}
+			// Execute command
+			commandExecutor(command)
+		}
+	}
+}
+
+func MqttMonitor() {
+	// monitor Status
+	go monitorStatus()
+	// monitor command execution
+	go monitorCommandExecution()
+}
+
+// Receive mqtt command, clean it up, and send to actual handler
+func MqttCommandAdapter(client pmg.Client, msg pmg.Message) {
 	//wt := watcher.Default
 	topic := strings.TrimPrefix(msg.Topic(), env.Default.Topicprefix)
 	log.Println(topic)
@@ -150,7 +157,7 @@ func CommandHandler(client pmg.Client, msg pmg.Message) {
 
 func MqttSubscribe() {
 	topics := map[string]pmg.MessageHandler{
-		"/command/+": CommandHandler,
+		"/command/+": MqttCommandAdapter,
 	}
 
 	for topic, topicHandler := range topics {
