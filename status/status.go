@@ -1,7 +1,9 @@
 package status
 
+import "time"
+
 type Status struct {
-	LocalTime int64       `json:"time"`
+	LocalTime time.Time   `json:"time"`
 	Type      string      `json:"type"`
 	Payload   interface{} `json:"status"`
 }

@@ -140,7 +140,7 @@ func (w *Watcher) isInWatchConfigList(imageName string) int {
 
 func (w *Watcher) statusPoll(imageName string) (status.Status, error) {
 	stat := status.Status{
-		LocalTime: time.Now().Local().Unix(),
+		LocalTime: time.Now().Local(),
 	}
 	switch imageName {
 	case "System":
